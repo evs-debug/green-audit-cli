@@ -1,50 +1,45 @@
 
-🔍 Auditing: https://motherfuckingwebsite.com
+🔍 Auditing: https://info.cern.ch
 
 ──────────────────────────────────────────────────
 📦 PAGE WEIGHT
 ──────────────────────────────────────────────────
-Total transferred: 175.2 KB
-  JS:     173.2 KB
+Total transferred: 2.0 KB
+  JS:     0.0 KB
   Images: 0.0 KB
-Requests: 6
-Load time: 2187 ms
+Requests: 2
+Load time: 1839 ms
 
 ──────────────────────────────────────────────────
 🧬 DOM COMPLEXITY
 ──────────────────────────────────────────────────
-DOM nodes: 38
+DOM nodes: 16
 ✅ DOM complexity OK
 
 ──────────────────────────────────────────────────
 ⚙️  JS EXECUTION
 ──────────────────────────────────────────────────
-Script duration: 67 ms
-JS heap used: 4.33 MB
+Script duration: 0 ms
+JS heap used: 1.07 MB
 
 ──────────────────────────────────────────────────
 ♻️  UNUSED JAVASCRIPT (dead code waste)
 ──────────────────────────────────────────────────
-1. 54.5% unused (236.7 KB wasted) — https://www.googletagmanager.com/gtag/js?id=G-3PM3V2QKFE&cx=c&_slc=1
-2. 50.3% unused (25.7 KB wasted) — https://www.google-analytics.com/analytics.js
-3. 0.0% unused (0.0 KB wasted) — https://motherfuckingwebsite.com/
+No significant unused JS detected.
 
 ──────────────────────────────────────────────────
 🌍 ESTIMATED CARBON FOOTPRINT
 ──────────────────────────────────────────────────
-Energy per view: 0.1353 Wh
-CO2e per view: 0.060 g
+Energy per view: 0.0015 Wh
+CO2e per view: 0.001 g
 
   🏆 GREEN SCORE: A  (Excellent — well below average)
 
 ──────────────────────────────────────────────────
 🚨 TOP GREEN BOTTLENECKS (largest assets)
 ──────────────────────────────────────────────────
-1. [script] 152.9 KB — https://www.googletagmanager.com/gtag/js?id=G-3PM3V2QKFE&cx=c&_slc=1
-2. [script] 20.3 KB — https://www.google-analytics.com/analytics.js
-3. [document] 2.0 KB — https://motherfuckingwebsite.com/
-4. [other] 0.0 KB — https://motherfuckingwebsite.com/favicon.ico
-5. [xhr] 0.0 KB — https://www.google-analytics.com/j/collect?v=1&_v=j102&a=1261670497&t=pageview&_
+1. [other] 1.4 KB — https://info.cern.ch/favicon.ico
+2. [document] 0.6 KB — https://info.cern.ch/
 
 ✅ Audit complete.
 
