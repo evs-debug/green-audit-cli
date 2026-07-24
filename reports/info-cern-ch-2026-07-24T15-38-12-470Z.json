@@ -1,0 +1,25 @@
+{
+  "data": {
+    "url": "https://info.cern.ch",
+    "loadTime": 3258,
+    "totalBytes": 646,
+    "scriptBytes": 0,
+    "imageBytes": 0,
+    "domNodeCount": 16,
+    "scriptDuration": 0,
+    "jsHeapUsed": 1127204,
+    "topResources": [
+      {
+        "url": "https://info.cern.ch/",
+        "type": "document",
+        "size": 646
+      }
+    ],
+    "resourceCount": 1,
+    "jsWaste": []
+  },
+  "energyKwh": 4.873238503932953e-7,
+  "carbonGrams": 0.0002153971418738365,
+  "grade": "A",
+  "label": "Excellent — well below average"
+}

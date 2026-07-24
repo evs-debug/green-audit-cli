@@ -1,9 +1,13 @@
 const { analyzePage } = require('./src/analyze');
 const { estimateCarbon, getGrade } = require('./src/carbon');
+const { saveReports } = require('./src/report');
 
-const url = process.argv[2];
+const args = process.argv.slice(2);
+const url = args[0];
+const shouldSave = args.includes('--save');
+
 if (!url) {
-  console.log('Usage: node index.js <url>');
+  console.log('Usage: node index.js <url> [--save]');
   process.exit(1);
 }
 
@@ -50,8 +54,7 @@ if (!url) {
   console.log('─'.repeat(50));
   console.log(`Energy per view: ${(energyKwh * 1000).toFixed(4)} Wh`);
   console.log(`CO2e per view: ${carbonGrams.toFixed(3)} g`);
-  console.log(`
-  🏆 GREEN SCORE: ${grade}  (${label})`);
+  console.log(`\n  🏆 GREEN SCORE: ${grade}  (${label})`);
 
   console.log('\n' + '─'.repeat(50));
   console.log('🚨 TOP GREEN BOTTLENECKS (largest assets)');
@@ -59,6 +62,15 @@ if (!url) {
   data.topResources.forEach((r, i) => {
     console.log(`${i + 1}. [${r.type}] ${(r.size / 1024).toFixed(1)} KB — ${r.url.slice(0, 80)}`);
   });
+
+  if (shouldSave) {
+    const { jsonPath, mdPath } = saveReports(data, energyKwh, carbonGrams, grade, label);
+    console.log('\n' + '─'.repeat(50));
+    console.log('💾 REPORTS SAVED');
+    console.log('─'.repeat(50));
+    console.log(`Markdown: ${mdPath}`);
+    console.log(`JSON:     ${jsonPath}`);
+  }
 
   console.log('\n✅ Audit complete.\n');
 })();
