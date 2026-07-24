@@ -34,6 +34,17 @@ if (!url) {
   console.log(`JS heap used: ${(data.jsHeapUsed / 1024 / 1024).toFixed(2)} MB`);
 
   console.log('\n' + '─'.repeat(50));
+  console.log('♻️  UNUSED JAVASCRIPT (dead code waste)');
+  console.log('─'.repeat(50));
+  if (data.jsWaste.length === 0) {
+    console.log('No significant unused JS detected.');
+  } else {
+    data.jsWaste.forEach((f, i) => {
+      console.log(`${i + 1}. ${f.unusedPercent.toFixed(1)}% unused (${(f.unusedBytes / 1024).toFixed(1)} KB wasted) — ${f.url.slice(0, 70)}`);
+    });
+  }
+
+  console.log('\n' + '─'.repeat(50));
   console.log('🌍 ESTIMATED CARBON FOOTPRINT');
   console.log('─'.repeat(50));
   console.log(`Energy per view: ${(energyKwh * 1000).toFixed(4)} Wh`);

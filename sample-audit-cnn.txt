@@ -1,0 +1,41 @@
+
+🔍 Auditing: https://cnn.com
+
+──────────────────────────────────────────────────
+📦 PAGE WEIGHT
+──────────────────────────────────────────────────
+Total transferred: 19699.6 KB
+  JS:     9414.3 KB
+  Images: 2278.8 KB
+Requests: 421
+Load time: 19521 ms
+
+──────────────────────────────────────────────────
+🧬 DOM COMPLEXITY
+──────────────────────────────────────────────────
+DOM nodes: 4017
+⚠️  High DOM complexity (>1500 nodes)
+
+──────────────────────────────────────────────────
+⚙️  JS EXECUTION
+──────────────────────────────────────────────────
+Script duration: 2371 ms
+JS heap used: 52.90 MB
+
+──────────────────────────────────────────────────
+🌍 ESTIMATED CARBON FOOTPRINT
+──────────────────────────────────────────────────
+Energy per view: 15.2175 Wh
+CO2e per view: 6.726 g
+
+──────────────────────────────────────────────────
+🚨 TOP GREEN BOTTLENECKS (largest assets)
+──────────────────────────────────────────────────
+1. [media] 2584.3 KB — https://media.cnn.com/api/v1/loops/stellar/prod/desktop-1wip0723-6-imageslidesho
+2. [script] 2295.2 KB — https://registry.api.cnn.io/bundles/fave/ui-a56400bf/ui
+3. [media] 1464.3 KB — https://media.cnn.com/api/v1/loops/stellar/prod/desktop-1wip0723-6-imageslidesho
+4. [media] 1236.9 KB — https://media.cnn.com/api/v1/loops/stellar/prod/desktop-bagstyle-4-imageslidesho
+5. [script] 1031.9 KB — https://js.stripe.com/dahlia/stripe.js
+
+✅ Audit complete.
+
