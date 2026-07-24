@@ -10,3 +10,13 @@ function estimateCarbon(totalBytes) {
 }
 
 module.exports = { estimateCarbon };
+
+function getGrade(carbonGrams) {
+  if (carbonGrams < 0.5) return { grade: 'A', label: 'Excellent — well below average' };
+  if (carbonGrams < 1.5) return { grade: 'B', label: 'Good — near typical average' };
+  if (carbonGrams < 3.5) return { grade: 'C', label: 'Fair — above average footprint' };
+  if (carbonGrams < 6.5) return { grade: 'D', label: 'Poor — high footprint' };
+  return { grade: 'F', label: 'Very poor — significant optimization needed' };
+}
+
+module.exports.getGrade = getGrade;

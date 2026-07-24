@@ -1,5 +1,5 @@
 const { analyzePage } = require('./src/analyze');
-const { estimateCarbon } = require('./src/carbon');
+const { estimateCarbon, getGrade } = require('./src/carbon');
 
 const url = process.argv[2];
 if (!url) {
@@ -11,6 +11,7 @@ if (!url) {
   console.log(`\n🔍 Auditing: ${url}\n`);
   const data = await analyzePage(url);
   const { energyKwh, carbonGrams } = estimateCarbon(data.totalBytes);
+  const { grade, label } = getGrade(carbonGrams);
 
   console.log('─'.repeat(50));
   console.log('📦 PAGE WEIGHT');
@@ -49,6 +50,8 @@ if (!url) {
   console.log('─'.repeat(50));
   console.log(`Energy per view: ${(energyKwh * 1000).toFixed(4)} Wh`);
   console.log(`CO2e per view: ${carbonGrams.toFixed(3)} g`);
+  console.log(`
+  🏆 GREEN SCORE: ${grade}  (${label})`);
 
   console.log('\n' + '─'.repeat(50));
   console.log('🚨 TOP GREEN BOTTLENECKS (largest assets)');
