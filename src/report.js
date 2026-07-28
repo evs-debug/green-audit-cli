@@ -7,24 +7,24 @@ function buildMarkdownReport(data, energyKwh, carbonGrams, grade, label) {
   lines.push(`**URL:** ${data.url}`);
   lines.push(`**Date:** ${new Date().toISOString()}`);
   lines.push(``);
-  lines.push(`## 🏆 Green Score: ${grade} — ${label}`);
+  lines.push(`## Green Score: ${grade} — ${label}`);
   lines.push(``);
-  lines.push(`## 📦 Page Weight`);
+  lines.push(`## Page Weight`);
   lines.push(`- Total transferred: ${(data.totalBytes / 1024).toFixed(1)} KB`);
   lines.push(`- JS: ${(data.scriptBytes / 1024).toFixed(1)} KB`);
   lines.push(`- Images: ${(data.imageBytes / 1024).toFixed(1)} KB`);
   lines.push(`- Requests: ${data.resourceCount}`);
   lines.push(`- Load time: ${data.loadTime} ms`);
   lines.push(``);
-  lines.push(`## 🧬 DOM Complexity`);
+  lines.push(`## DOM Complexity`);
   lines.push(`- DOM nodes: ${data.domNodeCount}`);
   lines.push(`- ${data.domNodeCount > 1500 ? '⚠️ High DOM complexity (>1500 nodes)' : '✅ DOM complexity OK'}`);
   lines.push(``);
-  lines.push(`## ⚙️ JS Execution`);
+  lines.push(`## JS Execution`);
   lines.push(`- Script duration: ${(data.scriptDuration * 1000).toFixed(0)} ms`);
   lines.push(`- JS heap used: ${(data.jsHeapUsed / 1024 / 1024).toFixed(2)} MB`);
   lines.push(``);
-  lines.push(`## ♻️ Unused JavaScript (dead code waste)`);
+  lines.push(`## Unused JavaScript (dead code waste)`);
   if (data.jsWaste.length === 0) {
     lines.push(`No significant unused JS detected.`);
   } else {
@@ -33,7 +33,7 @@ function buildMarkdownReport(data, energyKwh, carbonGrams, grade, label) {
     });
   }
   lines.push(``);
-  lines.push(`## 🌍 Estimated Carbon Footprint`);
+  lines.push(`## Estimated Carbon Footprint`);
   lines.push(`- Energy per view: ${(energyKwh * 1000).toFixed(4)} Wh`);
   lines.push(`- CO2e per view: ${carbonGrams.toFixed(3)} g`);
   lines.push(``);
