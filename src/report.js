@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { saveHtmlReport } = require('./htmlReport');
 
 function buildMarkdownReport(data, energyKwh, carbonGrams, grade, label) {
   const lines = [];
@@ -59,7 +60,9 @@ function saveReports(data, energyKwh, carbonGrams, grade, label) {
   fs.writeFileSync(jsonPath, JSON.stringify({ data, energyKwh, carbonGrams, grade, label }, null, 2));
   fs.writeFileSync(mdPath, buildMarkdownReport(data, energyKwh, carbonGrams, grade, label));
 
-  return { jsonPath, mdPath };
+  const htmlPath = saveHtmlReport(data, energyKwh, carbonGrams, grade, label);
+
+  return { jsonPath, mdPath, htmlPath };
 }
 
 module.exports = { saveReports };

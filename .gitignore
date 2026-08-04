@@ -144,4 +144,6 @@ vite.config.ts.timestamp-*
 
 reports/*.json
 reports/*.md
+reports/*.html
+reports/.analysis-cache.json
 !reports/.gitkeep
