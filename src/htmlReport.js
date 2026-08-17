@@ -95,7 +95,10 @@ function impactDescription(type) {
 function generateReport(data, energyKwh, carbonGrams, grade, label) {
   const rating = getRatingInfo(grade);
   const annualImpact = computeAnnualImpact(carbonGrams);
-  const transferSizeMB = (data.totalBytes / (1024 * 1024)).toFixed(2);
+  const transferSizeKB = data.totalBytes / 1024;
+  const transferSizeMB = transferSizeKB >= 1024
+    ? (transferSizeKB / 1024).toFixed(2) + ' MB'
+    : transferSizeKB.toFixed(1) + ' KB';
   const domPct = Math.min((data.domNodeCount / 1500) * 100, 100);
   const heapPct = Math.min((data.jsHeapUsed / (50 * 1024 * 1024)) * 100, 100);
   const scriptDurationMs = (data.scriptDuration * 1000).toFixed(0);
@@ -298,7 +301,7 @@ function generateReport(data, energyKwh, carbonGrams, grade, label) {
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                             Page Weight
                         </div>
-                        <div class="metric-value">${transferSizeMB} <span>MB</span></div>
+                        <div class="metric-value">${transferSizeMB}</div>
                         <div style="font-size: 0.75rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Total Transfer Size</div>
                         <p class="metric-desc">Total amount of data downloaded to display the webpage. Lighter pages require less energy to transfer.</p>
                     </div>
@@ -316,7 +319,7 @@ function generateReport(data, energyKwh, carbonGrams, grade, label) {
                 <div class="action-footer">
                     <span style="font-size: 0.85rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                        Estimates based on The Green Web Foundation methodology.
+                        Estimates based on the Sustainable Web Design model.
                     </span>
                     <button class="btn" onclick="document.getElementById('summary-view').classList.add('hidden'); document.getElementById('detailed-view').classList.remove('hidden');">View Full Detailed Report</button>
                 </div>
