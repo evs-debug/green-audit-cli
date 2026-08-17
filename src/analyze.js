@@ -25,7 +25,12 @@ async function analyzePage(url) {
   });
 
   const start = Date.now();
-  await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+  try {
+    await page.goto(url, { waitUntil: 'networkidle2', timeout: 45000 });
+  } catch (err) {
+    await browser.close();
+    throw new Error(`Could not load ${url} within 45 seconds. The site may be too slow, blocking automated browsers, or unreachable. Try again or test a different URL.`);
+  }
   const loadTime = Date.now() - start;
 
   const domNodeCount = await page.evaluate(() => document.querySelectorAll('*').length);

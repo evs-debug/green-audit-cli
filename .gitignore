@@ -147,3 +147,4 @@ reports/*.md
 reports/*.html
 reports/.analysis-cache.json
 !reports/.gitkeep
+.DS_Store
