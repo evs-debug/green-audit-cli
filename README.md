@@ -63,3 +63,12 @@ Reports are saved to the `reports/` directory:
 ## Methodology
 
 The tool loads a page in a headless Chromium browser and intercepts every network response to measure total bytes transferred. It also captures DOM node count (structural complexity) and JS heap/script execution time via Chrome's performance metrics. To convert bytes into a carbon estimate, we use the Sustainable Web Design model's energy intensity figure — approximately 0.81 kWh per GB transferred (covering data center, network transmission, and end-user device energy) — multiplied by a global average grid carbon intensity of ~442g CO2e per kWh. This gives a per-page-view estimate in grams of CO2e, which can be compared across sites or before/after optimizations.
+## Configuration
+Thresholds live in `.green-auditrc.json` (create with `node index.js --init-config`).
+Any key you leave out uses the default. Check the merged result with `--show-config`.
+
+## History
+Every audit appends a row to `history.csv`.
+- `node index.js --history` — table of all past audits with a per-site trend
+- `node index.js --history <text>` — filter by URL
+- `node index.js --clear-history`
