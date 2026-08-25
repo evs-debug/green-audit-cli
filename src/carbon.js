@@ -1,22 +1,21 @@
-// Constants based on the Sustainable Web Design model averages
-const ENERGY_PER_GB_KWH = 0.81; // kWh per GB transferred (network + datacenter + device)
-const GRID_CARBON_INTENSITY_G_PER_KWH = 442; // global average grams CO2e per kWh
+// src/carbon.js — now reads constants and grade thresholds from config
+// (.green-auditrc.json), falling back to the original hard-coded defaults.
+const { loadConfig } = require('./config');
 
-function estimateCarbon(totalBytes) {
+function estimateCarbon(totalBytes, cfg = loadConfig()) {
   const gb = totalBytes / (1024 ** 3);
-  const energyKwh = gb * ENERGY_PER_GB_KWH;
-  const carbonGrams = energyKwh * GRID_CARBON_INTENSITY_G_PER_KWH;
+  const energyKwh = gb * cfg.carbon.energyPerGbKwh;
+  const carbonGrams = energyKwh * cfg.carbon.gridCarbonIntensityGPerKwh;
   return { energyKwh, carbonGrams };
 }
 
-module.exports = { estimateCarbon };
-
-function getGrade(carbonGrams) {
-  if (carbonGrams < 0.5) return { grade: 'A', label: 'Excellent — well below average' };
-  if (carbonGrams < 1.5) return { grade: 'B', label: 'Good — near typical average' };
-  if (carbonGrams < 3.5) return { grade: 'C', label: 'Fair — above average footprint' };
-  if (carbonGrams < 6.5) return { grade: 'D', label: 'Poor — high footprint' };
-  return { grade: 'F', label: 'Very poor — significant optimization needed' };
+function getGrade(carbonGrams, cfg = loadConfig()) {
+  const { grades, labels } = cfg;
+  if (carbonGrams < grades.A) return { grade: 'A', label: labels.A };
+  if (carbonGrams < grades.B) return { grade: 'B', label: labels.B };
+  if (carbonGrams < grades.C) return { grade: 'C', label: labels.C };
+  if (carbonGrams < grades.D) return { grade: 'D', label: labels.D };
+  return { grade: 'F', label: labels.F };
 }
 
-module.exports.getGrade = getGrade;
+module.exports = { estimateCarbon, getGrade };

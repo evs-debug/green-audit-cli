@@ -148,3 +148,4 @@ reports/*.html
 reports/.analysis-cache.json
 !reports/.gitkeep
 .DS_Store
+history.csv 
