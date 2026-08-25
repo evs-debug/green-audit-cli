@@ -3,11 +3,12 @@
   "version": "1.0.0",
   "description": "A CLI tool that performs static and dynamic analysis of a webpage's loading cycle — calculating data payload size, JS execution energy drain, and DOM complexity, then converting these into an estimated carbon footprint per page view.",
   "main": "index.js",
-  "scripts ": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+  "bin": {
+    "green-audit": "./index.js"
+  },
+  "scripts": {
     "test": "node test/config.test.js && node test/history.test.js"
   },
-  
   "repository": {
     "type": "git",
     "url": "git+https://github.com/evs-debug/green-audit-cli.git"
@@ -22,5 +23,8 @@
   "homepage": "https://github.com/evs-debug/green-audit-cli#readme",
   "dependencies": {
     "puppeteer": "^25.3.0"
+  },
+  "allowScripts": {
+    "puppeteer@25.3.0": true
   }
 }
