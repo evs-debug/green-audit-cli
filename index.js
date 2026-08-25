@@ -1,92 +1,96 @@
+#!/usr/bin/env node
 const { analyzePage } = require('./src/analyze');
 const { estimateCarbon, getGrade } = require('./src/carbon');
 const { saveReports } = require('./src/report');
 const { normalizeUrl } = require('./src/url');
 const { openReportInBrowser } = require('./src/openReport');
 const { loadCachedAnalysis, saveCachedAnalysis } = require('./src/cache');
+const { runBatch } = require('./src/batch');
 
 const args = process.argv.slice(2);
-const url = args[0];
 
-if (!url) {
-  console.log('Usage: node index.js <url>');
-  process.exit(1);
-}
-
-(async () => {
-  try {
-    const normalizedUrl = normalizeUrl(url);
-    console.log(`\n🔍 Auditing: ${normalizedUrl}\n`);
-
-    let data = loadCachedAnalysis(normalizedUrl);
-    if (!data) {
-      data = await analyzePage(normalizedUrl);
-      saveCachedAnalysis(normalizedUrl, data);
-    } else {
-      console.log('📦 Using cached analysis snapshot for this URL.');
-    }
-
-    const { energyKwh, carbonGrams } = estimateCarbon(data.totalBytes);
-    const { grade, label } = getGrade(carbonGrams);
-
-    console.log('─'.repeat(50));
-    console.log('📦 PAGE WEIGHT');
-    console.log('─'.repeat(50));
-    console.log(`Total transferred: ${(data.totalBytes / 1024).toFixed(1)} KB`);
-    console.log(`  JS:     ${(data.scriptBytes / 1024).toFixed(1)} KB`);
-    console.log(`  Images: ${(data.imageBytes / 1024).toFixed(1)} KB`);
-    console.log(`Requests: ${data.resourceCount}`);
-    console.log(`Load time: ${data.loadTime} ms`);
-
-    console.log('\n' + '─'.repeat(50));
-    console.log('🧬 DOM COMPLEXITY');
-    console.log('─'.repeat(50));
-    console.log(`DOM nodes: ${data.domNodeCount}`);
-    console.log(data.domNodeCount > 1500 ? '⚠️  High DOM complexity (>1500 nodes)' : '✅ DOM complexity OK');
-
-    console.log('\n' + '─'.repeat(50));
-    console.log('⚙️  JS EXECUTION');
-    console.log('─'.repeat(50));
-    console.log(`Script duration: ${(data.scriptDuration * 1000).toFixed(0)} ms`);
-    console.log(`JS heap used: ${(data.jsHeapUsed / 1024 / 1024).toFixed(2)} MB`);
-
-    console.log('\n' + '─'.repeat(50));
-    console.log('♻️  UNUSED JAVASCRIPT (dead code waste)');
-    console.log('─'.repeat(50));
-    if (data.jsWaste.length === 0) {
-      console.log('No significant unused JS detected.');
-    } else {
-      data.jsWaste.forEach((f, i) => {
-        console.log(`${i + 1}. ${f.unusedPercent.toFixed(1)}% unused (${(f.unusedBytes / 1024).toFixed(1)} KB wasted) — ${f.url.slice(0, 70)}`);
-      });
-    }
-
-    console.log('\n' + '─'.repeat(50));
-    console.log('🌍 ESTIMATED CARBON FOOTPRINT');
-    console.log('─'.repeat(50));
-    console.log(`Energy per view: ${(energyKwh * 1000).toFixed(4)} Wh`);
-    console.log(`CO2e per view: ${carbonGrams.toFixed(3)} g`);
-    console.log(`\n  🏆 GREEN SCORE: ${grade}  (${label})`);
-
-    console.log('\n' + '─'.repeat(50));
-    console.log('🚨 TOP GREEN BOTTLENECKS (largest assets)');
-    console.log('─'.repeat(50));
-    data.topResources.forEach((r, i) => {
-      console.log(`${i + 1}. [${r.type}] ${(r.size / 1024).toFixed(1)} KB — ${r.url.slice(0, 80)}`);
-    });
-
-    const { jsonPath, mdPath, htmlPath } = saveReports(data, energyKwh, carbonGrams, grade, label);
-    console.log('\n' + '─'.repeat(50));
-    console.log('💾 REPORTS SAVED');
-    console.log('─'.repeat(50));
-    console.log(`HTML:     ${htmlPath}`);
-    console.log(`Markdown: ${mdPath}`);
-    console.log(`JSON:     ${jsonPath}`);
-    openReportInBrowser(htmlPath);
-
-    console.log('\n✅ Audit complete.\n');
-  } catch (error) {
-    console.error('\n❌ Audit failed:', error.message);
+if (args[0] === 'batch') {
+  const filePath = args[1];
+  if (!filePath) {
+    console.log('Usage: green-audit batch <file.txt|file.csv>');
     process.exit(1);
   }
-})();
+  runBatch(filePath).catch(err => {
+    console.error('\n❌ Batch audit failed:', err.message);
+    process.exit(1);
+  });
+} else {
+  const url = args[0];
+  if (!url) {
+    console.log('Usage: node index.js <url>');
+    process.exit(1);
+  }
+
+  (async () => {
+    try {
+      const normalizedUrl = normalizeUrl(url);
+      console.log(`\n🔍 Auditing: ${normalizedUrl}\n`);
+      let data = loadCachedAnalysis(normalizedUrl);
+      if (!data) {
+        data = await analyzePage(normalizedUrl);
+        saveCachedAnalysis(normalizedUrl, data);
+      } else {
+        console.log('📦 Using cached analysis snapshot for this URL.');
+      }
+      const { energyKwh, carbonGrams } = estimateCarbon(data.totalBytes);
+      const { grade, label } = getGrade(carbonGrams);
+      console.log('─'.repeat(50));
+      console.log('📦 PAGE WEIGHT');
+      console.log('─'.repeat(50));
+      console.log(`Total transferred: ${(data.totalBytes / 1024).toFixed(1)} KB`);
+      console.log(`  JS:     ${(data.scriptBytes / 1024).toFixed(1)} KB`);
+      console.log(`  Images: ${(data.imageBytes / 1024).toFixed(1)} KB`);
+      console.log(`Requests: ${data.resourceCount}`);
+      console.log(`Load time: ${data.loadTime} ms`);
+      console.log('\n' + '─'.repeat(50));
+      console.log('🧬 DOM COMPLEXITY');
+      console.log('─'.repeat(50));
+      console.log(`DOM nodes: ${data.domNodeCount}`);
+      console.log(data.domNodeCount > 1500 ? '⚠️  High DOM complexity (>1500 nodes)' : '✅ DOM complexity OK');
+      console.log('\n' + '─'.repeat(50));
+      console.log('⚙️  JS EXECUTION');
+      console.log('─'.repeat(50));
+      console.log(`Script duration: ${(data.scriptDuration * 1000).toFixed(0)} ms`);
+      console.log(`JS heap used: ${(data.jsHeapUsed / 1024 / 1024).toFixed(2)} MB`);
+      console.log('\n' + '─'.repeat(50));
+      console.log('♻️  UNUSED JAVASCRIPT (dead code waste)');
+      console.log('─'.repeat(50));
+      if (data.jsWaste.length === 0) {
+        console.log('No significant unused JS detected.');
+      } else {
+        data.jsWaste.forEach((f, i) => {
+          console.log(`${i + 1}. ${f.unusedPercent.toFixed(1)}% unused (${(f.unusedBytes / 1024).toFixed(1)} KB wasted) — ${f.url.slice(0, 70)}`);
+        });
+      }
+      console.log('\n' + '─'.repeat(50));
+      console.log('🌍 ESTIMATED CARBON FOOTPRINT');
+      console.log('─'.repeat(50));
+      console.log(`Energy per view: ${(energyKwh * 1000).toFixed(4)} Wh`);
+      console.log(`CO2e per view: ${carbonGrams.toFixed(3)} g`);
+      console.log(`\n  🏆 GREEN SCORE: ${grade}  (${label})`);
+      console.log('\n' + '─'.repeat(50));
+      console.log('🚨 TOP GREEN BOTTLENECKS (largest assets)');
+      console.log('─'.repeat(50));
+      data.topResources.forEach((r, i) => {
+        console.log(`${i + 1}. [${r.type}] ${(r.size / 1024).toFixed(1)} KB — ${r.url.slice(0, 80)}`);
+      });
+      const { jsonPath, mdPath, htmlPath } = saveReports(data, energyKwh, carbonGrams, grade, label);
+      console.log('\n' + '─'.repeat(50));
+      console.log('💾 REPORTS SAVED');
+      console.log('─'.repeat(50));
+      console.log(`HTML:     ${htmlPath}`);
+      console.log(`Markdown: ${mdPath}`);
+      console.log(`JSON:     ${jsonPath}`);
+      openReportInBrowser(htmlPath);
+      console.log('\n✅ Audit complete.\n');
+    } catch (error) {
+      console.error('\n❌ Audit failed:', error.message);
+      process.exit(1);
+    }
+  })();
+}
