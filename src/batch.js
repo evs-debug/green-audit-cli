@@ -10,7 +10,21 @@ const { normalizeUrl } = require('./url');
 const { loadCachedAnalysis, saveCachedAnalysis } = require('./cache');
 
 function parseInputFile(filePath) {
-  const content = fs.readFileSync(filePath, 'utf-8');
+  let content;
+  try {
+    content = fs.readFileSync(filePath, 'utf-8');
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      throw new Error(`Input file not found: ${filePath}`);
+    }
+    if (err.code === 'EACCES') {
+      throw new Error(`Permission denied reading input file: ${filePath}`);
+    }
+    if (err.code === 'EISDIR') {
+      throw new Error(`Expected a file but got a directory: ${filePath}`);
+    }
+    throw new Error(`Could not read input file ${filePath}: ${err.message}`);
+  }
   const ext = path.extname(filePath).toLowerCase();
 
   let lines = content

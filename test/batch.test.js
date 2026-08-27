@@ -52,3 +52,12 @@ const emptyPath = writeTemp('empty.txt', '');
 assert.deepStrictEqual(parseInputFile(emptyPath), []);
 
 console.log('✅ batch tests passed');
+
+// --- clear error for missing input file, not a raw Node ENOENT ---
+assert.throws(() => parseInputFile('/tmp/definitely-does-not-exist-ga.txt'), /Input file not found/);
+
+// --- clear error when pointed at a directory instead of a file ---
+const dirPath = fs.mkdtempSync(path.join(os.tmpdir(), 'ga-batch-dir-'));
+assert.throws(() => parseInputFile(dirPath), /Expected a file but got a directory/);
+
+console.log('✅ batch error-handling tests passed');
