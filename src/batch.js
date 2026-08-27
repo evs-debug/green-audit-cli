@@ -5,6 +5,7 @@ const { analyzePage } = require('./analyze');
 const { estimateCarbon, getGrade } = require('./carbon');
 const { saveReports } = require('./report');
 const { saveBatchReport } = require('./batchReport');
+const { saveBatchHtmlReport } = require('./batchHtmlReport');
 const { normalizeUrl } = require('./url');
 const { loadCachedAnalysis, saveCachedAnalysis } = require('./cache');
 
@@ -93,7 +94,10 @@ async function runBatch(filePath) {
   printComparisonTable(results);
 
   const { mdPath } = saveBatchReport(results);
-  console.log(`💾 Batch report saved: ${mdPath}\n`);
+  const htmlPath = saveBatchHtmlReport(results);
+  console.log(`💾 Batch reports saved:`);
+  console.log(`   Markdown: ${mdPath}`);
+  console.log(`   HTML:     ${htmlPath}\n`);
   return results;
 }
 
