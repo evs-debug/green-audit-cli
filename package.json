@@ -1,13 +1,13 @@
 {
   "name": "green-audit-cli",
   "version": "1.0.0",
-  "description": "A CLI tool that performs static and dynamic analysis of a webpage's loading cycle — calculating data payload size, JS execution energy drain, and DOM complexity, then converting these into an estimated carbon footprint per page view.",
+  "description": "A CLI tool that performs static and dynamic analysis of a webpage's loading cycle \u2014 calculating data payload size, JS execution energy drain, and DOM complexity, then converting these into an estimated carbon footprint per page view.",
   "main": "index.js",
   "bin": {
     "green-audit": "./index.js"
   },
   "scripts": {
-    "test": "node test/config.test.js && node test/history.test.js && node test/carbon.test.js"
+    "test": "node test/config.test.js && node test/history.test.js && node test/carbon.test.js && node test/url.test.js && node test/batch.test.js"
   },
   "repository": {
     "type": "git",
