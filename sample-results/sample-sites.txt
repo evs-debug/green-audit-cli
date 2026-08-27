@@ -1,0 +1,11 @@
+# News
+https://www.bbc.com
+https://www.reuters.com
+
+# E-commerce
+https://www.amazon.in
+https://www.flipkart.com
+
+# Lightweight / reference
+https://example.com
+https://motherfuckingwebsite.com
