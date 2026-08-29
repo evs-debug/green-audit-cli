@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>GreenAudit — Full Report</title>
+  <link rel="stylesheet" href="report.css">
+</head>
+<body>
+  <div id="loading" class="container">
+    <p>Loading report…</p>
+  </div>
+
+  <div id="error" class="container hidden">
+    <p class="error-text">Couldn't load report data. Try running the audit again from the popup.</p>
+  </div>
+
+  <div id="report" class="container hidden">
+    <header>
+      <div class="logo">🌿 GreenAudit</div>
+      <div class="report-meta" id="report-meta"></div>
+    </header>
+
+    <h1 class="page-title">Sustainability Report</h1>
+    <p class="page-subtitle">Full detailed audit for the page you visited.</p>
+
+    <div class="glass-card hero-card">
+      <div>
+        <div class="hero-label">Analysis Complete</div>
+        <h2 id="rating-text">Excellent Rating</h2>
+        <p id="rating-description" class="rating-description"></p>
+      </div>
+      <div id="grade-circle" class="grade-circle">A</div>
+    </div>
+
+    <div class="metrics-grid">
+      <div class="glass-card metric-card">
+        <div class="metric-label">Carbon Emissions</div>
+        <div id="metric-carbon" class="metric-value">—</div>
+        <div class="metric-sublabel">PER PAGE VIEW</div>
+      </div>
+      <div class="glass-card metric-card">
+        <div class="metric-label">Page Weight</div>
+        <div id="metric-weight" class="metric-value">—</div>
+        <div class="metric-sublabel">TOTAL TRANSFER SIZE</div>
+      </div>
+      <div class="glass-card metric-card">
+        <div class="metric-label">Load Time</div>
+        <div id="metric-loadtime" class="metric-value">—</div>
+        <div class="metric-sublabel">TIME TO LOAD</div>
+      </div>
+    </div>
+
+    <div class="glass-card">
+      <h3>Technical Details</h3>
+      <div class="details-grid">
+        <div><span class="detail-label">DOM Nodes</span><span id="detail-dom" class="detail-value"></span></div>
+        <div><span class="detail-label">Requests</span><span id="detail-requests" class="detail-value"></span></div>
+        <div><span class="detail-label">JS bytes</span><span id="detail-js" class="detail-value"></span></div>
+        <div><span class="detail-label">Image bytes</span><span id="detail-img" class="detail-value"></span></div>
+      </div>
+    </div>
+
+    <div class="glass-card">
+      <h3>Annual Impact (estimated, at 10,000 views/month)</h3>
+      <div class="impact-grid" id="impact-grid"></div>
+    </div>
+
+    <div class="glass-card">
+      <h3>Top Bottlenecks (largest measurable assets)</h3>
+      <div id="bottlenecks-list"></div>
+      <p class="small-note">Only resources with a measurable transfer size are shown — cross-origin resources without a Timing-Allow-Origin header can't be sized by this extension (see note below).</p>
+    </div>
+
+    <div class="glass-card limitations-card">
+      <h3>Not available in this extension</h3>
+      <p>These require the Chrome DevTools Coverage/Performance APIs, which aren't exposed to extensions without the invasive <code>debugger</code> permission — they're CLI-only for now:</p>
+      <ul>
+        <li>Unused JavaScript (dead code) detection</li>
+        <li>JS execution time and heap memory usage</li>
+      </ul>
+      <p class="small-note">Page weight may also be undercounted on pages with heavy cross-origin content (ads, trackers, third-party CDNs) — see the extension README for a measured example of how large this gap can be.</p>
+    </div>
+  </div>
+
+  <script type="module" src="report.js"></script>
+</body>
+</html>

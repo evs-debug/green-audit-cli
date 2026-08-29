@@ -11,6 +11,9 @@ const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
 
 const gradeColors = { A: '#10b981', B: '#84cc16', C: '#eab308', D: '#f97316', F: '#7f1d1d' };
 
+const STORAGE_KEY = "greenaudit_last_report";
+let lastAuditResult = null;
+
 const el = (id) => document.getElementById(id);
 
 function showState(name) {
@@ -44,8 +47,18 @@ function collectPageMetricsInPage() {
 
   if (nav && nav.transferSize) totalBytes += nav.transferSize;
 
-  const domNodeCount = document.getElementsByTagName('*').length;
+  const domNodeCount = document.getElementsByTagName("*").length;
   const loadTime = nav ? Math.round(nav.loadEventEnd - nav.startTime) : null;
+
+  // Top 5 largest resources by transfer size, for the full report's
+  // bottleneck list. Resources with unknown size (cross-origin, no
+  // Timing-Allow-Origin) are excluded rather than shown as misleading
+  // zeros.
+  const topResources = resources
+    .filter((r) => r.transferSize > 0)
+    .map((r) => ({ url: r.name, type: r.initiatorType || "other", size: r.transferSize }))
+    .sort((a, b) => b.size - a.size)
+    .slice(0, 5);
 
   return {
     url: location.href,
@@ -54,6 +67,7 @@ function collectPageMetricsInPage() {
     imageBytes,
     domNodeCount,
     loadTime,
+    topResources,
     resourceCount: resources.length + (nav ? 1 : 0),
   };
 }
@@ -72,6 +86,7 @@ function formatWeight(bytes) {
 }
 
 function renderResult(data, energyKwh, carbonGrams, grade, label) {
+  lastAuditResult = { data, energyKwh, carbonGrams, grade, label };
   el('grade-badge').textContent = grade;
   el('grade-badge').style.background = gradeColors[grade] || '#64748b';
   el('grade-label').textContent = label;
@@ -120,3 +135,9 @@ async function runAudit() {
 el('run-audit').addEventListener('click', runAudit);
 el('run-again').addEventListener('click', runAudit);
 el('run-retry').addEventListener('click', runAudit);
+
+el("view-full-report").addEventListener("click", async () => {
+  if (!lastAuditResult) return;
+  await browserAPI.storage.local.set({ [STORAGE_KEY]: lastAuditResult });
+  browserAPI.tabs.create({ url: browserAPI.runtime.getURL("report.html") });
+});

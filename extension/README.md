@@ -59,7 +59,18 @@ pulling in the full `webextension-polyfill` dependency for that.
 
 ## Usage
 
-Click the GreenAudit icon on any page, then click **Audit this page**.
+Click the GreenAudit icon on any page, then click **Audit this page**
+for the quick summary (grade, CO2e, page weight, DOM nodes, requests).
+
+Click **View full report** to open a full sustainability report in a
+new tab — hero rating, annual impact projections (miles driven,
+trees needed to offset), and a top-bottlenecks list of the largest
+measurable page assets. This mirrors the CLI's `htmlReport.js` output
+as closely as an extension can, given the architectural limitations
+below (no unused-JS detection, no JS execution/heap metrics). The
+report reads the exact data from the audit you just ran (via
+`chrome.storage.local`/`browser.storage.local`) rather than
+re-measuring, so it won't drift from what the popup showed.
 
 ## Limitations (honest, by design)
 
