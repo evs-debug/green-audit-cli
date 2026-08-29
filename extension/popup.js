@@ -1,5 +1,14 @@
 import { estimateCarbon, getGrade } from './carbon.js';
 
+// Chrome exposes callback-and-promise chrome.*; Firefox exposes a
+// promise-native browser.* (chrome.* also exists there for compat, but
+// isn't guaranteed to be promise-based for every API). This extension
+// only touches tabs.query and scripting.executeScript, both of which
+// are promise-based on both browsers once accessed through the right
+// namespace -- so a tiny shim covers it without pulling in the full
+// webextension-polyfill dependency.
+const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+
 const gradeColors = { A: '#10b981', B: '#84cc16', C: '#eab308', D: '#f97316', F: '#7f1d1d' };
 
 const el = (id) => document.getElementById(id);
@@ -10,7 +19,8 @@ function showState(name) {
   });
 }
 
-// Runs inside the audited page's context via chrome.scripting.executeScript.
+// Runs inside the audited page's context via scripting.executeScript
+// (through the browserAPI shim above, so it works on Chrome and Firefox).
 // Uses the Resource Timing + Navigation Timing APIs, since a real headless
 // browser (Puppeteer) isn't available inside an extension — this reads
 // whatever the page itself already recorded.
@@ -49,7 +59,7 @@ function collectPageMetricsInPage() {
 }
 
 async function collectPageMetrics(tabId) {
-  const [{ result }] = await chrome.scripting.executeScript({
+  const [{ result }] = await browserAPI.scripting.executeScript({
     target: { tabId },
     func: collectPageMetricsInPage,
   });
@@ -81,7 +91,7 @@ function renderError(err) {
 async function runAudit() {
   showState('loading-state');
   try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const [tab] = await browserAPI.tabs.query({ active: true, currentWindow: true });
     if (!tab || !tab.id) throw new Error('No active tab found.');
     if (tab.url && (tab.url.startsWith('chrome://') || tab.url.startsWith('edge://'))) {
       throw new Error('Cannot audit internal browser pages.');

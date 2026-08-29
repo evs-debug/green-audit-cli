@@ -5,8 +5,8 @@ get an estimated carbon footprint for the page you're currently viewing.
 
 ## Status
 
-Working MVP. Scoped down from the CLI tool — see Limitations below for
-exactly what's different and why.
+Working MVP, tested on both Chrome and Firefox. Scoped down from the
+CLI tool — see Limitations below for exactly what's different and why.
 
 ## Why this exists
 
@@ -32,10 +32,30 @@ CLI's `analyze.js`.
 
 ## Installation (development / unpacked)
 
-1. `chrome://extensions`
+### Chrome / Edge
+
+1. `chrome://extensions` (or `edge://extensions`)
 2. Enable **Developer mode** (top right)
 3. **Load unpacked** → select this `extension/` folder
 4. Pin the extension (puzzle-piece icon in the toolbar → pin GreenAudit)
+
+### Firefox
+
+Firefox doesn't have a persistent "load unpacked" for development —
+extensions loaded this way are temporary and cleared when Firefox
+restarts.
+
+1. `about:debugging#/runtime/this-firefox`
+2. **Load Temporary Add-on…**
+3. Select the `manifest.json` file directly (not the folder)
+4. Pin it to the toolbar if it doesn't appear automatically
+
+Both browsers run from the exact same source — `popup.js` uses a small
+compatibility shim (`const browserAPI = typeof browser !== 'undefined'
+? browser : chrome;`) to handle Chrome's `chrome.*` vs Firefox's
+promise-native `browser.*` namespace, since this extension only needs
+two APIs (`tabs.query`, `scripting.executeScript`) and didn't warrant
+pulling in the full `webextension-polyfill` dependency for that.
 
 ## Usage
 
@@ -71,18 +91,54 @@ too** — there's currently no automated sync between them.
 
 ## Tested on
 
-| Site | Grade | Notes |
-|---|---|---|
-| en.wikipedia.org | A | 595.9 KB, 2370 DOM nodes, 25 requests — close to the CLI's own Wikipedia audit (538.6 KB), confirming the two measurement approaches roughly agree. |
+| Site | Browser | Grade | CO2e / view | Page Weight | DOM Nodes | Requests |
+|---|---|---|---|---|---|---|
+| en.wikipedia.org | Chrome | A | 0.203 g | 595.9 KB | 2370 | 25 |
+| en.wikipedia.org | Chrome | A | 0.031 g | 91.6 KB | 2369 | 18 |
+| en.wikipedia.org | Firefox | A | 0.141 g | 413.5 KB | 2370 | 24 |
+| edition.cnn.com | Chrome | A | 0.420 g | 1.20 MB (~1229 KB) | 3952 | 251 |
+| nytimes.com | Chrome | B | 1.066 g | 3.05 MB (~3123 KB) | 2887 | 251 |
+| amazon.in | Chrome | B | 0.763 g | 2.18 MB (~2232 KB) | 1509 | 56 |
 
-*(Add rows here as more sites are tested — see Next Steps.)*
+Note the two Wikipedia/Chrome rows and the Firefox row show different
+numbers for the *same page* — this isn't a bug or a browser
+inconsistency. Resource Timing results depend on the browser's current
+cache state (already-cached resources report differently) and can vary
+between page loads even in the same browser. This is expected variance
+for a live, real-world measurement, not something the tool gets wrong.
+
+*(Add rows here as more sites are tested.)*
+
+## Extension vs. CLI: a direct comparison
+
+`amazon.in` was also audited by the CLI tool (see
+`sample-results/category-comparison.md`), giving a rare direct
+side-by-side of the two measurement approaches on the same live page:
+
+| | Page Weight | Grade | CO2e / view |
+|---|---|---|---|
+| CLI (Puppeteer, network interception) | 5987.9 KB | C | 2.044 g |
+| Extension (Resource Timing API) | ~2232 KB | B | 0.763 g |
+
+The extension measured **roughly 63% less page weight** than the CLI on
+the identical page — a large enough gap to change the letter grade from
+C to B. This is a direct, measured demonstration of the
+Timing-Allow-Origin limitation described above, not a theoretical
+concern: Amazon's product pages load a lot of cross-origin ad, tracking,
+and CDN content that the Resource Timing API simply can't see the size
+of without that header being set by the resource's own server. Worth
+citing in the final report as evidence that the extension is a useful
+quick-check tool, but the CLI remains the more accurate one for serious
+auditing.
 
 ## Next steps
 
 - Test against more real sites, especially ones with heavy third-party
   ad/tracker content, to measure how much the cross-origin undercount
   actually matters in practice
-- Harden error handling for CSP-restricted pages and other edge cases
-- Real MV2/Firefox build (this is Manifest V3, Chrome/Edge only for now)
+- Harden error handling further for additional CSP/permission edge cases
 - Consider an automatic on-load badge mode as a future option, instead
   of click-to-audit only
+- Package for actual distribution (Chrome Web Store, Firefox AMO) if
+  the team wants this beyond a development/demo build — currently only
+  loadable as unpacked/temporary, not signed or store-published
