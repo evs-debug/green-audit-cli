@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>GreenAudit</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <div class="logo">🌿 GreenAudit</div>
+
+    <div id="idle-state">
+      <p class="hint">Audit the carbon footprint of the page you're currently viewing.</p>
+      <button id="run-audit">Audit this page</button>
+    </div>
+
+    <div id="loading-state" class="hidden">
+      <p class="hint">Auditing…</p>
+    </div>
+
+    <div id="result-state" class="hidden">
+      <div class="grade-row">
+        <span id="grade-badge" class="grade-badge">A</span>
+        <div>
+          <div id="grade-label" class="grade-label">Excellent</div>
+          <div id="page-url" class="page-url"></div>
+        </div>
+      </div>
+
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-label">CO2e / view</div>
+          <div id="metric-carbon" class="metric-value">—</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Page weight</div>
+          <div id="metric-weight" class="metric-value">—</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">DOM nodes</div>
+          <div id="metric-dom" class="metric-value">—</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Requests</div>
+          <div id="metric-requests" class="metric-value">—</div>
+        </div>
+      </div>
+
+      <p class="limitation-note">
+        Note: extension audits estimate page weight from resource timing
+        data available in-browser. Cross-origin resources without a
+        Timing-Allow-Origin header may be undercounted. Unused-JS
+        detection and JS execution/heap metrics are CLI-only (they need
+        the Chrome DevTools Coverage API, which isn't exposed to
+        extensions without an invasive debugger permission).
+      </p>
+
+      <button id="run-again" class="secondary">Audit again</button>
+    </div>
+
+    <div id="error-state" class="hidden">
+      <p class="error-text" id="error-text"></p>
+      <button id="run-retry" class="secondary">Try again</button>
+    </div>
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

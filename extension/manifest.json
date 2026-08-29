@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "GreenAudit",
+  "version": "0.1.0",
+  "description": "Estimate the carbon footprint of the page you're currently viewing.",
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": ["<all_urls>"]
+}
