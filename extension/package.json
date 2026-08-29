@@ -1,0 +1,5 @@
+{
+  "name": "green-audit-extension",
+  "private": true,
+  "type": "module"
+}

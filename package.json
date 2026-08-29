@@ -7,7 +7,7 @@
     "green-audit": "./index.js"
   },
   "scripts": {
-    "test": "node test/config.test.js && node test/history.test.js && node test/carbon.test.js && node test/url.test.js && node test/batch.test.js && node test/cache.test.js"
+    "test": "node test/config.test.js && node test/history.test.js && node test/carbon.test.js && node test/url.test.js && node test/batch.test.js && node test/cache.test.js && node test/extension-sync.test.mjs"
   },
   "repository": {
     "type": "git",
