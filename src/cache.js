@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { loadConfig } = require('./config');
 
 function getCacheFilePath() {
   const dir = path.join(process.cwd(), 'reports');
@@ -9,7 +10,7 @@ function getCacheFilePath() {
   return path.join(dir, '.analysis-cache.json');
 }
 
-function loadCachedAnalysis(url) {
+function loadCachedAnalysis(url, cfg = loadConfig()) {
   const cachePath = getCacheFilePath();
   if (!fs.existsSync(cachePath)) {
     return null;
@@ -17,7 +18,18 @@ function loadCachedAnalysis(url) {
 
   try {
     const cache = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
-    return cache[url] || null;
+    const entry = cache[url];
+    if (!entry) return null;
+
+    // Entries from before TTL support was added have no savedAt --
+    // treat as stale rather than trusting data of unknown age.
+    if (!entry.savedAt) return null;
+
+    const ttlMs = cfg.cache.ttlHours * 60 * 60 * 1000;
+    const ageMs = Date.now() - entry.savedAt;
+    if (ageMs > ttlMs) return null;
+
+    return entry.data;
   } catch (error) {
     return null;
   }
@@ -35,7 +47,7 @@ function saveCachedAnalysis(url, snapshot) {
     }
   }
 
-  cache[url] = snapshot;
+  cache[url] = { savedAt: Date.now(), data: snapshot };
   fs.writeFileSync(cachePath, JSON.stringify(cache, null, 2));
 }
 

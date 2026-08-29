@@ -29,6 +29,10 @@ const DEFAULTS = {
   },
   dom: {
     highComplexityNodes: 1500 // DOM node count above which we warn
+  },
+  cache: {
+    ttlHours: 24 // cached audits older than this are treated as a miss
+                 // and re-audited, rather than trusted indefinitely
   }
 };
 
@@ -67,9 +71,14 @@ function validate(cfg) {
       prev = cfg.grades[g];
     }
   }
-  for (const key of ['carbon', 'labels', 'dom']) {
+  for (const key of ['carbon', 'labels', 'dom', 'cache']) {
     if (cfg[key] !== undefined && (typeof cfg[key] !== 'object' || Array.isArray(cfg[key]))) {
       throw new Error(`${key} must be an object`);
+    }
+  }
+  if (cfg.cache && cfg.cache.ttlHours !== undefined) {
+    if (typeof cfg.cache.ttlHours !== 'number' || cfg.cache.ttlHours <= 0) {
+      throw new Error('cache.ttlHours must be a positive number');
     }
   }
 }
