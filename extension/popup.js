@@ -86,7 +86,19 @@ async function runAudit() {
     if (tab.url && (tab.url.startsWith('chrome://') || tab.url.startsWith('edge://'))) {
       throw new Error('Cannot audit internal browser pages.');
     }
-    const data = await collectPageMetrics(tab.id);
+    let data;
+    try {
+      data = await collectPageMetrics(tab.id);
+    } catch (err) {
+      // Chrome blocks script injection into a handful of protected
+      // surfaces (the Web Store, its own settings pages under some
+      // configs, etc.) and throws its own message for it -- surface
+      // that distinctly rather than a generic "audit failed".
+      if (err.message && err.message.includes('cannot be scripted')) {
+        throw new Error('This page is protected by the browser and cannot be audited (e.g. the Chrome Web Store).');
+      }
+      throw err;
+    }
     const { energyKwh, carbonGrams } = estimateCarbon(data.totalBytes);
     const { grade, label } = getGrade(carbonGrams);
     renderResult(data, energyKwh, carbonGrams, grade, label);
