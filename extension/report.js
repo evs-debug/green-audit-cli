@@ -40,6 +40,30 @@ function formatWeight(bytes) {
 
 const el = (id) => document.getElementById(id);
 
+function showFatalError(msg) {
+  try {
+    console.error('Report page error:', msg);
+    const loadingEl = el('loading');
+    const errorEl = el('error');
+    if (loadingEl) loadingEl.classList.add('hidden');
+    if (errorEl) {
+      errorEl.classList.remove('hidden');
+      const text = errorEl.querySelector('.error-text');
+      if (text) text.textContent = `Couldn't load report data: ${msg}`;
+    }
+  } catch (e) {
+    // swallow
+  }
+}
+
+window.addEventListener('error', (ev) => {
+  showFatalError(ev && ev.message ? ev.message : 'Unknown error');
+});
+window.addEventListener('unhandledrejection', (ev) => {
+  const reason = (ev && ev.reason) ? (ev.reason.message || ev.reason) : 'Unhandled promise rejection';
+  showFatalError(reason);
+});
+
 function render(stored) {
   const { data, energyKwh, carbonGrams, grade, label } = stored;
   const rating = getRatingInfo(grade);
@@ -49,7 +73,15 @@ function render(stored) {
   el('rating-text').textContent = `${rating.text} Rating`;
   el('rating-description').textContent = rating.description;
   el('grade-circle').textContent = grade;
-  el('grade-circle').style.background = gradeColors[grade] || '#64748b';
+  // Render grade fill: A = full, others partial to show not-perfect
+  const fillMap = { A: 1, B: 0.75, C: 0.55, D: 0.35, F: 0.12 };
+  const pct = fillMap[grade] || 0.5;
+  const degrees = Math.max(1, Math.round(pct * 360));
+  const color = gradeColors[grade] || '#84cc16';
+  // Use a ring visual: radial white center, conic-gradient ring showing the fill portion
+  el('grade-circle').style.background = `radial-gradient(circle, white 0 60%, transparent 61%), conic-gradient(${color} 0 ${degrees}deg, rgba(0,0,0,0.06) ${degrees}deg)`;
+  el('grade-circle').style.color = color;
+  el('grade-circle').style.border = `4px solid ${color}`;
 
   el('metric-carbon').textContent = `${carbonGrams.toFixed(3)} g`;
   el('metric-weight').textContent = formatWeight(data.totalBytes);
@@ -67,42 +99,92 @@ function render(stored) {
   `;
 
   const bottlenecks = data.topResources || [];
+  function describeResource(r) {
+    let name = r.url || '';
+    let host = '';
+    try {
+      const u = new URL(r.url);
+      host = u.hostname;
+      const parts = u.pathname.split('/').filter(Boolean);
+      name = parts.length ? parts[parts.length - 1] : u.pathname || u.hostname;
+    } catch (e) {}
+    const typeLabel = (r.type || '').toLowerCase();
+    // More explicit, plain-language descriptions (title, short impact, concrete action)
+    if (typeLabel.includes('script') || typeLabel === 'js') {
+      return {
+        title: `JavaScript file — ${name}`,
+        impact: `This is one of the largest downloads on the page and can slow loading and increase battery/CPU use.`,
+        action: `Reduce its size by removing unused code, splitting into smaller bundles, or lazy-loading when possible. Hosted on ${host || 'the site'}.`
+      };
+    }
+    if (typeLabel.includes('image')) {
+      return {
+        title: `Image file — ${name}`,
+        impact: `Large images increase download time for visitors, especially on mobile or slow connections.`,
+        action: `Compress, resize, or convert to modern formats (WebP/AVIF); use responsive images or lazy-loading. Hosted on ${host || 'the site'}.`
+      };
+    }
+    if (typeLabel.includes('font')) {
+      return {
+        title: `Web font — ${name}`,
+        impact: `Fonts can be render-blocking and add significant bytes to the page.`,
+        action: `Subset fonts to include only needed characters, or prefer system fonts to reduce downloads.`
+      };
+    }
+    if (typeLabel.includes('stylesheet') || typeLabel === 'css') {
+      return {
+        title: `Stylesheet — ${name}`,
+        impact: `Large CSS bundles can delay rendering and increase page weight.`,
+        action: `Remove unused CSS, split critical vs non-critical styles, and minify the files.`
+      };
+    }
+    return {
+      title: `${r.type || 'Resource'} — ${name}`,
+      impact: `This resource contributes to the page's total transfer size.`,
+      action: host ? `Check caching, compression and whether it can be hosted on a faster CDN (${host}).` : 'Check caching and compression for this resource.'
+    };
+  }
+
   el('bottlenecks-list').innerHTML = bottlenecks.length
-    ? bottlenecks.map((r) => `
+    ? bottlenecks.map((r, idx) => {
+        const desc = describeResource(r);
+        return `
         <div class="bottleneck-row">
-          <span class="bottleneck-url">[${r.type}] ${r.url}</span>
+          <div style="max-width:78%">
+            <div class="bottleneck-desc">${idx + 1}. ${desc.title}</div>
+              <div class="bottleneck-explain">${desc.impact}</div>
+              <div class="bottleneck-action">Suggested fix: ${desc.action}</div>
+          </div>
           <span class="bottleneck-size">${formatWeight(r.size)}</span>
-        </div>`).join('')
+        </div>`;
+      }).join('')
     : '<p class="small-note">No resources with a measurable transfer size were found on this page.</p>';
+
+  // Render unused JS if available (CLI/coverage data)
+  const unusedListEl = el('unused-js-list');
+  try {
+    const candidate = data.unusedJavaScript || stored.unusedJavaScript || data.unused || stored.unused || [];
+    const normalize = (arr) => arr.map((u) => ({
+      name: u.name || u.file || (u.url ? (new URL(u.url).pathname.split('/').filter(Boolean).pop() || u.url) : ''),
+      url: u.url || u.file || u.name,
+      percent: u.unusedPercent || u.percent || u.unusedPercent === 0 ? (u.unusedPercent || u.percent) : undefined,
+      bytes: u.unusedBytes || u.bytes || u.unused_bytes || undefined,
+    }));
+    const unused = Array.isArray(candidate) ? normalize(candidate) : [];
+    if (unusedListEl && unused.length) {
+      unusedListEl.innerHTML = unused.map(u => `
+        <div class="unused-item">
+          <div class="unused-title">${u.name || u.url}</div>
+          <div class="unused-meta">${u.percent ? u.percent.toFixed ? u.percent.toFixed(1) + '% unused' : u.percent + '% unused' : ''} ${u.bytes ? '— ' + formatWeight(u.bytes) : ''}</div>
+        </div>
+      `).join('');
+    }
+  } catch (e) {
+    // leave default message
+  }
 
   el('loading').classList.add('hidden');
   el('report').classList.remove('hidden');
-}
-
-// Wires the Summary/Details tab nav Pranali added -- toggles which
-// <section class="page"> is visible and marks the corresponding
-// nav button active.
-function setupTabs() {
-  const summaryBtn = el('btn-summary');
-  const detailsBtn = el('btn-details');
-  const summaryPage = el('page-summary');
-  const detailsPage = el('page-details');
-
-  if (!summaryBtn || !detailsBtn || !summaryPage || !detailsPage) return;
-
-  summaryBtn.addEventListener('click', () => {
-    summaryBtn.classList.add('active');
-    detailsBtn.classList.remove('active');
-    summaryPage.classList.remove('hidden');
-    detailsPage.classList.add('hidden');
-  });
-
-  detailsBtn.addEventListener('click', () => {
-    detailsBtn.classList.add('active');
-    summaryBtn.classList.remove('active');
-    detailsPage.classList.remove('hidden');
-    summaryPage.classList.add('hidden');
-  });
 }
 
 async function init() {
@@ -110,8 +192,36 @@ async function init() {
     const result = await browserAPI.storage.local.get(STORAGE_KEY);
     const stored = result[STORAGE_KEY];
     if (!stored) throw new Error('No report data found');
-    render(stored);
-    setupTabs();
+    try {
+      render(stored);
+    } catch (err) {
+      showFatalError(err && err.message ? err.message : 'Rendering error');
+      return;
+    }
+    // Page navigation handlers
+    const btnSummary = el('btn-summary');
+    const btnDetails = el('btn-details');
+    const showPage = (page) => {
+      const summary = el('page-summary');
+      const details = el('page-details');
+      if (!summary || !details) return;
+      if (page === 'summary') {
+        summary.classList.remove('hidden');
+        details.classList.add('hidden');
+        btnSummary.classList.add('active');
+        btnDetails.classList.remove('active');
+      } else {
+        summary.classList.add('hidden');
+        details.classList.remove('hidden');
+        btnSummary.classList.remove('active');
+        btnDetails.classList.add('active');
+      }
+    };
+    if (btnSummary && btnDetails) {
+      btnSummary.addEventListener('click', () => showPage('summary'));
+      btnDetails.addEventListener('click', () => showPage('details'));
+    }
+    // No upload handler: unused-JS feature removed per user request
   } catch (err) {
     el('loading').classList.add('hidden');
     el('error').classList.remove('hidden');
