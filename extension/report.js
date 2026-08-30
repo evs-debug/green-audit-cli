@@ -79,12 +79,39 @@ function render(stored) {
   el('report').classList.remove('hidden');
 }
 
+// Wires the Summary/Details tab nav Pranali added -- toggles which
+// <section class="page"> is visible and marks the corresponding
+// nav button active.
+function setupTabs() {
+  const summaryBtn = el('btn-summary');
+  const detailsBtn = el('btn-details');
+  const summaryPage = el('page-summary');
+  const detailsPage = el('page-details');
+
+  if (!summaryBtn || !detailsBtn || !summaryPage || !detailsPage) return;
+
+  summaryBtn.addEventListener('click', () => {
+    summaryBtn.classList.add('active');
+    detailsBtn.classList.remove('active');
+    summaryPage.classList.remove('hidden');
+    detailsPage.classList.add('hidden');
+  });
+
+  detailsBtn.addEventListener('click', () => {
+    detailsBtn.classList.add('active');
+    summaryBtn.classList.remove('active');
+    detailsPage.classList.remove('hidden');
+    summaryPage.classList.add('hidden');
+  });
+}
+
 async function init() {
   try {
     const result = await browserAPI.storage.local.get(STORAGE_KEY);
     const stored = result[STORAGE_KEY];
     if (!stored) throw new Error('No report data found');
     render(stored);
+    setupTabs();
   } catch (err) {
     el('loading').classList.add('hidden');
     el('error').classList.remove('hidden');
