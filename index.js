@@ -8,6 +8,7 @@ const { loadCachedAnalysis, saveCachedAnalysis } = require('./src/cache');
 const { loadConfig, writeSampleConfig } = require('./src/config');        // Member 4
 const { appendHistory, printHistory, clearHistory } = require('./src/history'); // Member 5
 const { runBatch } = require('./src/batch');                              // Member 3 (batch CLI)
+const { checkAuditValidity } = require('./src/auditValidity');
 
 const args = process.argv.slice(2);
 
@@ -59,11 +60,16 @@ if (args[0] === 'batch') {
       let data = loadCachedAnalysis(normalizedUrl);
       if (!data) {
         data = await analyzePage(normalizedUrl);
-        saveCachedAnalysis(normalizedUrl, data);
       } else {
         fromCache = true;
         console.log('📦 Using cached analysis snapshot for this URL.');
       }
+      const validity = checkAuditValidity(data);
+      // Suspect audits aren't cached, so the next run retries the live site.
+      if (!fromCache && !validity.suspect) saveCachedAnalysis(normalizedUrl, data);
+      if (data.finalUrl && data.finalUrl !== normalizedUrl) console.log(`↪️  Final URL: ${data.finalUrl}`);
+      console.log(`HTTP status: ${data.mainDocumentStatus ?? 'unknown'}`);
+      if (data.pageTitle) console.log(`Page title: ${data.pageTitle}`);
       const { energyKwh, carbonGrams } = estimateCarbon(data.totalBytes, cfg);
       const { grade, label } = getGrade(carbonGrams, cfg);
       console.log('─'.repeat(50));
@@ -100,7 +106,14 @@ if (args[0] === 'batch') {
       console.log('─'.repeat(50));
       console.log(`Energy per view: ${(energyKwh * 1000).toFixed(4)} Wh`);
       console.log(`CO2e per view: ${carbonGrams.toFixed(3)} g`);
-      console.log(`\n  🏆 GREEN SCORE: ${grade}  (${label})`);
+      if (validity.suspect) {
+        console.log('\n  ⚠️  UNVERIFIED RESULT');
+        validity.reasons.forEach((r) => console.log(`     - ${r}`));
+        console.log('     The grade below may describe a block or challenge page, not the real site.');
+      } else if (validity.possiblyIncomplete) {
+        console.log(`\n  ℹ️  Possibly incomplete: ${validity.reasons.join('; ')}`);
+      }
+      console.log(`\n  🏆 GREEN SCORE: ${grade}${validity.suspect ? ' (unverified)' : ''}  (${label})`);
       console.log('\n' + '─'.repeat(50));
       console.log('🚨 TOP GREEN BOTTLENECKS (largest assets)');
       console.log('─'.repeat(50));
@@ -115,7 +128,10 @@ if (args[0] === 'batch') {
       console.log(`Markdown: ${mdPath}`);
       console.log(`JSON:     ${jsonPath}`);
 
-      if (!args.includes('--no-history')) {                                 // Member 5
+      if (validity.suspect) {
+        // Keep false grades out of history.csv so they don't show up as a trend.
+        console.log('History:  skipped (unverified result)');
+      } else if (!args.includes('--no-history')) {                          // Member 5
         const historyPath = appendHistory(normalizedUrl, data, carbonGrams, grade, fromCache);
         console.log(`History:  ${historyPath}  (view with: node index.js --history)`);
       }
