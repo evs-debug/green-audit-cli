@@ -5,6 +5,8 @@
 // browser.* equivalent on Firefox) rather than re-running the audit,
 // so the report reflects exactly what the popup measured.
 
+import { describePageWeightPercentile } from './pageWeightPercentile.js';
+
 const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
 
 const STORAGE_KEY = 'greenaudit_last_report';
@@ -15,7 +17,7 @@ const gradeColors = { A: '#10b981', B: '#84cc16', C: '#eab308', D: '#f97316', F:
 // the language matches the CLI's report exactly.
 function getRatingInfo(grade) {
   const map = {
-    A: { text: 'Excellent', description: 'This webpage is cleaner than 85% of pages tested. It runs on sustainable energy and is highly optimized.' },
+    A: { text: 'Excellent', description: 'This webpage has a very low estimated carbon footprint per view, based on its transfer size and resource usage.' },
     B: { text: 'Good', description: 'This webpage has a lower than average carbon footprint. Some further optimizations could make it even greener.' },
     C: { text: 'Fair', description: 'This webpage has an above average carbon footprint. Consider optimizing resources to reduce environmental impact.' },
     D: { text: 'Poor', description: 'This webpage has a high carbon footprint. Significant optimizations are recommended.' },
@@ -71,7 +73,8 @@ function render(stored) {
 
   el('report-meta').textContent = `Report generated for: ${data.url}`;
   el('rating-text').textContent = `${rating.text} Rating`;
-  el('rating-description').textContent = rating.description;
+  const weightComparison = describePageWeightPercentile(data.totalBytes);
+  el('rating-description').textContent = weightComparison ? `${rating.description} ${weightComparison}` : rating.description;
   el('grade-circle').textContent = grade;
   // Render grade fill: A = full, others partial to show not-perfect
   const fillMap = { A: 1, B: 0.75, C: 0.55, D: 0.35, F: 0.12 };

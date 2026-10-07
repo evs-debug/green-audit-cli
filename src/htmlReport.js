@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { describePageWeightPercentile } = require('./pageWeightPercentile');
 
 /**
  * Computes annual impact estimates based on carbon emissions per view.
@@ -29,7 +30,7 @@ function computeAnnualImpact(carbonGrams) {
  */
 function getRatingInfo(grade) {
   const map = {
-    'A': { text: 'Excellent', description: 'This webpage is cleaner than 85% of pages tested. It runs on sustainable energy and is highly optimized.' },
+    'A': { text: 'Excellent', description: 'This webpage has a very low estimated carbon footprint per view, based on its transfer size and resource usage.' },
     'B': { text: 'Good', description: 'This webpage has a lower than average carbon footprint. Some further optimizations could make it even greener.' },
     'C': { text: 'Fair', description: 'This webpage has an above average carbon footprint. Consider optimizing resources to reduce environmental impact.' },
     'D': { text: 'Poor', description: 'This webpage has a high carbon footprint. Significant optimizations are recommended.' },
@@ -94,6 +95,7 @@ function impactDescription(type) {
  */
 function generateReport(data, energyKwh, carbonGrams, grade, label) {
   const rating = getRatingInfo(grade);
+  const weightComparison = describePageWeightPercentile(data.totalBytes);
   const annualImpact = computeAnnualImpact(carbonGrams);
   const transferSizeKB = data.totalBytes / 1024;
   const transferSizeMB = transferSizeKB >= 1024
@@ -281,7 +283,7 @@ function generateReport(data, energyKwh, carbonGrams, grade, label) {
                             Analysis Complete
                         </div>
                         <h2 class="serif"><strong>${rating.text}</strong> Rating</h2>
-                        <p>${rating.description}</p>
+                        <p>${rating.description}${weightComparison ? ' ' + weightComparison : ''}</p>
                     </div>
                     <div class="grade-circle">${grade}</div>
                 </div>
