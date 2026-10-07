@@ -21,11 +21,11 @@ const DEFAULTS = {
     D: 6.5
   },
   labels: {
-    A: 'Excellent — well below average',
-    B: 'Good — near typical average',
-    C: 'Fair — above average footprint',
-    D: 'Poor — high footprint',
-    F: 'Very poor — significant optimization needed'
+    A: 'Excellent — much lighter than typical',
+    B: 'Good — close to typical',
+    C: 'Fair — heavier than typical',
+    D: 'Poor — much heavier than typical',
+    F: 'Very poor — far heavier than typical'
   },
   dom: {
     highComplexityNodes: 1500 // DOM node count above which we warn
