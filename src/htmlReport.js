@@ -1,6 +1,12 @@
 const fs = require('fs');
 const path = require('path');
 const { describePageWeightPercentile } = require('./pageWeightPercentile');
+const { checkAuditValidity } = require('./auditValidity');
+
+// Page titles come from the audited site, so escape anything page-controlled.
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
 
 /**
  * Computes annual impact estimates based on carbon emissions per view.
@@ -96,6 +102,17 @@ function impactDescription(type) {
 function generateReport(data, energyKwh, carbonGrams, grade, label) {
   const rating = getRatingInfo(grade);
   const weightComparison = describePageWeightPercentile(data.totalBytes);
+  const validity = checkAuditValidity(data);
+  const statusText = data.mainDocumentStatus ?? 'unknown';
+  const finalUrlNote = data.finalUrl && data.finalUrl !== data.url
+    ? ` &rarr; <strong>${escapeHtml(data.finalUrl)}</strong>`
+    : '';
+  let validityBanner = '';
+  if (validity.suspect) {
+    validityBanner = `<div class="validity-banner suspect" role="alert"><strong>Unverified result.</strong> ${escapeHtml(validity.reasons.join('; '))}. The grade below may describe a block or challenge page, not the real site.</div>`;
+  } else if (validity.possiblyIncomplete) {
+    validityBanner = `<div class="validity-banner incomplete" role="note"><strong>Possibly incomplete.</strong> ${escapeHtml(validity.reasons.join('; '))}.</div>`;
+  }
   const annualImpact = computeAnnualImpact(carbonGrams);
   const transferSizeKB = data.totalBytes / 1024;
   const transferSizeMB = transferSizeKB >= 1024
@@ -175,6 +192,10 @@ function generateReport(data, energyKwh, carbonGrams, grade, label) {
         }
         .logo { font-weight: 800; font-size: 1.25rem; letter-spacing: -0.5px; display: flex; align-items: center; gap: 8px;}
         .report-meta { font-size: 0.875rem; color: var(--text-muted); }
+        .validity-banner { border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; font-size: 0.95rem; }
+        .validity-banner.suspect { background: #fee2e2; border: 1px solid #ef4444; color: #7f1d1d; }
+        .validity-banner.incomplete { background: #fef3c7; border: 1px solid #f59e0b; color: #78350f; }
+        .status-badge.unverified { color: #b91c1c; }
         .container { max-width: 1100px; margin: 0 auto; padding: 2rem; }
         .page-title { font-size: 2.75rem; margin-bottom: 0.5rem; }
         .page-subtitle { color: var(--text-muted); margin-bottom: 2rem; font-size: 1.1rem;}
@@ -266,7 +287,7 @@ function generateReport(data, energyKwh, carbonGrams, grade, label) {
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary-green)"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"></path><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"></path></svg>
             GreenAudit.
         </div>
-        <div class="report-meta">Report generated for: <strong>${data.url}</strong></div>
+        <div class="report-meta">Report generated for: <strong>${data.url}</strong>${finalUrlNote} &middot; HTTP ${statusText}</div>
     </header>
 
     <div class="container">
@@ -275,13 +296,15 @@ function generateReport(data, energyKwh, carbonGrams, grade, label) {
             <h1 class="serif page-title">Sustainability Report</h1>
             <p class="page-subtitle">Here is the environmental impact analysis for the webpage you were just visiting.</p>
 
+            ${validityBanner}
+
             <div class="glass-card">
                 <div class="hero-card">
                     <div class="hero-text">
-                        <div class="status-badge">
+                        ${validity.suspect ? `<div class="status-badge unverified">Unverified result</div>` : `<div class="status-badge">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                             Analysis Complete
-                        </div>
+                        </div>`}
                         <h2 class="serif"><strong>${rating.text}</strong> Rating</h2>
                         <p>${rating.description}${weightComparison ? ' ' + weightComparison : ''}</p>
                     </div>

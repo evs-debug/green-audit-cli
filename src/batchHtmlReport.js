@@ -1,5 +1,11 @@
 const fs = require('fs');
 const path = require('path');
+const { summarizeBatch, gradeNote } = require('./batchReport');
+
+// Page-controlled strings (final URLs, error text) are escaped.
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
 
 // Batch comparison HTML report — reuses the same visual language as the
 // single-URL report (src/htmlReport.js: grade color variables, glass-card
@@ -12,29 +18,23 @@ function gradeColor(grade) {
 }
 
 function generateBatchReport(results) {
-  const succeeded = results.filter(r => !r.error);
-  const failed = results.filter(r => r.error);
-  const sorted = [...succeeded].sort((a, b) => a.carbonGrams - b.carbonGrams);
-  const avgCarbon = succeeded.length
-    ? succeeded.reduce((sum, r) => sum + r.carbonGrams, 0) / succeeded.length
-    : 0;
-  const best = sorted[0];
-  const worst = sorted[sorted.length - 1];
+  const { succeeded, failed, sorted, ranked, suspectCount, avgCarbon, best, worst } = summarizeBatch(results);
   const timestamp = new Date().toISOString();
 
   const rows = sorted.map((r, i) => `
         <tr>
           <td>${i + 1}</td>
-          <td class="url-cell">${r.url}</td>
-          <td><span class="grade-badge" style="background:${gradeColor(r.grade)}">${r.grade}</span></td>
+          <td class="url-cell">${escapeHtml(r.url)}${r.finalUrl && r.finalUrl !== r.url ? `<div class="final-url">&rarr; ${escapeHtml(r.finalUrl)}</div>` : ''}${r.validity && r.validity.reasons && r.validity.reasons.length ? `<div class="row-warning">${escapeHtml(r.validity.reasons.join('; '))}</div>` : ''}</td>
+          <td><span class="grade-badge" style="background:${gradeColor(r.grade)}">${r.grade}</span>${gradeNote(r) ? `<span class="grade-note">${gradeNote(r).trim()}</span>` : ''}</td>
           <td>${r.carbonGrams.toFixed(3)} g</td>
           <td>${r.totalKB.toFixed(1)} KB</td>
+          <td>${r.mainDocumentStatus ?? 'unknown'}</td>
         </tr>`).join('');
 
   const failedRows = failed.map(r => `
         <tr class="failed-row">
-          <td colspan="2">${r.url}</td>
-          <td colspan="3">Failed \u2014 ${r.error}</td>
+          <td colspan="2">${escapeHtml(r.url)}</td>
+          <td colspan="4">Failed \u2014 ${escapeHtml(r.error)}</td>
         </tr>`).join('');
 
   return `<!DOCTYPE html>
@@ -82,15 +82,19 @@ function generateBatchReport(results) {
     .url-cell { font-family: monospace; font-size: 0.9rem; word-break: break-all; }
     .grade-badge { color: white; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 6px; font-size: 0.9rem; }
     .failed-row { color: #b91c1c; font-size: 0.9rem; }
+    .grade-note { margin-left: 0.4rem; font-size: 0.8rem; color: #b91c1c; font-weight: 600; }
+    .final-url { font-size: 0.8rem; color: var(--text-muted); }
+    .row-warning { font-family: system-ui, sans-serif; font-size: 0.8rem; color: #b45309; margin-top: 0.25rem; }
+    .excluded-note { font-size: 0.85rem; color: var(--text-muted); margin-top: 1rem; width: 100%; }
     .meta { font-size: 0.85rem; color: var(--text-muted); margin-top: 2rem; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1 class="page-title">Batch Audit Report</h1>
-    <p class="page-subtitle">${results.length} URL${results.length === 1 ? '' : 's'} audited \u2014 ${succeeded.length} succeeded, ${failed.length} failed</p>
+    <p class="page-subtitle">${results.length} URL${results.length === 1 ? '' : 's'} audited \u2014 ${succeeded.length} succeeded, ${failed.length} failed${suspectCount ? `, ${suspectCount} unverified` : ''}</p>
 
-    ${succeeded.length > 0 ? `
+    ${ranked.length > 0 ? `
     <div class="glass-card summary-grid">
       <div class="summary-item">
         <div class="label">Average footprint</div>
@@ -104,12 +108,14 @@ function generateBatchReport(results) {
         <div class="label">Heaviest</div>
         <div class="value" style="color:${gradeColor(worst.grade)}">${worst.grade} \u2014 ${worst.url}</div>
       </div>
-    </div>` : ''}
+      ${suspectCount ? `<p class="excluded-note">${suspectCount} unverified result${suspectCount === 1 ? '' : 's'} excluded from these figures (likely a block or challenge page).</p>` : ''}
+    </div>` : (succeeded.length > 0 ? `
+    <div class="glass-card"><p>No verified results to summarize. ${suspectCount} unverified result${suspectCount === 1 ? '' : 's'} excluded.</p></div>` : '')}
 
     <div class="glass-card">
       <table>
         <thead>
-          <tr><th>#</th><th>URL</th><th>Grade</th><th>CO2e / view</th><th>Page Weight</th></tr>
+          <tr><th>#</th><th>URL</th><th>Grade</th><th>CO2e / view</th><th>Page Weight</th><th>HTTP</th></tr>
         </thead>
         <tbody>${rows}${failedRows}</tbody>
       </table>

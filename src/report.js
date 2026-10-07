@@ -1,14 +1,25 @@
 const fs = require('fs');
 const path = require('path');
 const { saveHtmlReport } = require('./htmlReport');
+const { checkAuditValidity } = require('./auditValidity');
 
-function buildMarkdownReport(data, energyKwh, carbonGrams, grade, label) {
+function buildMarkdownReport(data, energyKwh, carbonGrams, grade, label, validity = checkAuditValidity(data)) {
   const lines = [];
   lines.push(`# Green Audit Report`);
   lines.push(`**URL:** ${data.url}`);
+  lines.push(`**Final URL:** ${data.finalUrl || 'unknown'}`);
+  lines.push(`**HTTP status:** ${data.mainDocumentStatus ?? 'unknown'}`);
+  if (data.pageTitle) lines.push(`**Page title:** ${data.pageTitle}`);
   lines.push(`**Date:** ${new Date().toISOString()}`);
   lines.push(``);
-  lines.push(`## Green Score: ${grade} — ${label}`);
+  if (validity.suspect) {
+    lines.push(`> ⚠️ **Unverified result:** ${validity.reasons.join('; ')}. The grade below may describe a block or challenge page, not the real site.`);
+    lines.push(``);
+  } else if (validity.possiblyIncomplete) {
+    lines.push(`> ℹ️ **Possibly incomplete:** ${validity.reasons.join('; ')}.`);
+    lines.push(``);
+  }
+  lines.push(`## Green Score: ${grade} — ${label}${validity.suspect ? ' (unverified)' : ''}`);
   lines.push(``);
   lines.push(`## Page Weight`);
   lines.push(`- Total transferred: ${(data.totalBytes / 1024).toFixed(1)} KB`);
@@ -57,12 +68,13 @@ function saveReports(data, energyKwh, carbonGrams, grade, label) {
   const jsonPath = path.join(dir, `${baseName}.json`);
   const mdPath = path.join(dir, `${baseName}.md`);
 
-  fs.writeFileSync(jsonPath, JSON.stringify({ data, energyKwh, carbonGrams, grade, label }, null, 2));
-  fs.writeFileSync(mdPath, buildMarkdownReport(data, energyKwh, carbonGrams, grade, label));
+  const validity = checkAuditValidity(data);
+  fs.writeFileSync(jsonPath, JSON.stringify({ data, energyKwh, carbonGrams, grade, label, validity }, null, 2));
+  fs.writeFileSync(mdPath, buildMarkdownReport(data, energyKwh, carbonGrams, grade, label, validity));
 
   const htmlPath = saveHtmlReport(data, energyKwh, carbonGrams, grade, label);
 
   return { jsonPath, mdPath, htmlPath };
 }
 
-module.exports = { saveReports };
+module.exports = { saveReports, buildMarkdownReport };

@@ -4,10 +4,11 @@ const path = require('path');
 const { analyzePage } = require('./analyze');
 const { estimateCarbon, getGrade } = require('./carbon');
 const { saveReports } = require('./report');
-const { saveBatchReport } = require('./batchReport');
+const { saveBatchReport, gradeNote } = require('./batchReport');
 const { saveBatchHtmlReport } = require('./batchHtmlReport');
 const { normalizeUrl } = require('./url');
 const { loadCachedAnalysis, saveCachedAnalysis } = require('./cache');
+const { checkAuditValidity } = require('./auditValidity');
 
 function parseInputFile(filePath) {
   let content;
@@ -42,26 +43,39 @@ function parseInputFile(filePath) {
   return lines.filter(Boolean);
 }
 
-async function auditOne(rawUrl) {
+// `analyze` is injectable so tests can substitute a fake for puppeteer.
+async function auditOne(rawUrl, { analyze = analyzePage } = {}) {
   const normalizedUrl = normalizeUrl(rawUrl);
 
   let data = loadCachedAnalysis(normalizedUrl);
-  if (!data) {
-    data = await analyzePage(normalizedUrl);
-    saveCachedAnalysis(normalizedUrl, data);
-  }
+  const fromCache = Boolean(data);
+  if (!data) data = await analyze(normalizedUrl);
+
+  const validity = checkAuditValidity(data);
+  // Don't cache suspect audits: the next run should retry the live site
+  // rather than replay a block page for the whole cache TTL.
+  if (!fromCache && !validity.suspect) saveCachedAnalysis(normalizedUrl, data);
 
   const { energyKwh, carbonGrams } = estimateCarbon(data.totalBytes);
   const { grade, label } = getGrade(carbonGrams);
+
+  if (validity.suspect) {
+    console.log(`   ⚠️  Unverified result for ${normalizedUrl}: ${validity.reasons.join('; ')}`);
+  } else if (validity.possiblyIncomplete) {
+    console.log(`   ℹ️  Possibly incomplete: ${validity.reasons.join('; ')}`);
+  }
 
   saveReports(data, energyKwh, carbonGrams, grade, label);
 
   return {
     url: normalizedUrl,
+    finalUrl: data.finalUrl ?? null,
+    mainDocumentStatus: data.mainDocumentStatus ?? null,
     grade,
     label,
     carbonGrams,
     totalKB: data.totalBytes / 1024,
+    validity,
   };
 }
 
@@ -74,9 +88,10 @@ function printComparisonTable(results) {
     if (r.error) {
       console.log(`❌ ${r.url}  —  FAILED (${r.error})`);
     } else {
+      const redirect = r.finalUrl && r.finalUrl !== r.url ? ` → ${r.finalUrl}` : '';
       console.log(
-        `${r.url}  scored  ${r.grade}  ` +
-        `(${r.carbonGrams.toFixed(3)}g CO2e, ${r.totalKB.toFixed(1)} KB)`
+        `${r.url}  scored  ${r.grade}${gradeNote(r)}  ` +
+        `(${r.carbonGrams.toFixed(3)}g CO2e, ${r.totalKB.toFixed(1)} KB, HTTP ${r.mainDocumentStatus ?? 'unknown'}${redirect})`
       );
     }
   });
@@ -84,7 +99,7 @@ function printComparisonTable(results) {
   console.log('─'.repeat(70) + '\n');
 }
 
-async function runBatch(filePath) {
+async function runBatch(filePath, { analyze = analyzePage } = {}) {
   const urls = parseInputFile(filePath);
 
   if (urls.length === 0) {
@@ -98,9 +113,10 @@ async function runBatch(filePath) {
   for (const rawUrl of urls) {
     try {
       console.log(`→ Auditing ${rawUrl}...`);
-      const result = await auditOne(rawUrl);
+      const result = await auditOne(rawUrl, { analyze });
       results.push(result);
     } catch (err) {
+      console.log(`   ❌ Failed: ${err.message}`);
       results.push({ url: rawUrl, error: err.message });
     }
   }
@@ -115,4 +131,4 @@ async function runBatch(filePath) {
   return results;
 }
 
-module.exports = { runBatch, parseInputFile };
+module.exports = { runBatch, auditOne, parseInputFile };
