@@ -33,7 +33,7 @@ No significant unused JS detected.
 Energy per view: 0.0015 Wh
 CO2e per view: 0.001 g
 
-  🏆 GREEN SCORE: A  (Excellent — well below average)
+  🏆 GREEN SCORE: A  (Excellent — much lighter than typical)
 
 ──────────────────────────────────────────────────
 🚨 TOP GREEN BOTTLENECKS (largest assets)
