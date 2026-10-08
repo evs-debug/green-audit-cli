@@ -1,6 +1,13 @@
 const puppeteer = require('puppeteer');
 const { withContextRetry } = require('./contextRetry');
 const { findChallengePhrase } = require('./auditValidity');
+const { BYTE_METHOD, NETWORK_EVENTS, aggregateTransfer } = require('./transferBytes');
+
+// Extra Chromium flags. Empty = default configuration. If cross-site iframes
+// turn out to be undercounted (site isolation puts them in separate targets
+// this page's CDP session can't see), add e.g.
+// '--disable-features=site-per-process,IsolateOrigins' here.
+const LAUNCH_ARGS = [];
 
 // After load, wait this long to see whether a JS redirect starts...
 const SETTLE_QUIET_MS = 1500;
@@ -26,7 +33,7 @@ async function settle(page) {
 }
 
 async function analyzePage(url) {
-  const browser = await puppeteer.launch();
+  const browser = await puppeteer.launch({ args: LAUNCH_ARGS });
   try {
     const page = await browser.newPage();
 
@@ -34,29 +41,27 @@ async function analyzePage(url) {
       page.coverage.startJSCoverage(),
     ]);
 
-    const resources = [];
+    // Record raw Network events from a dedicated CDP session; they're
+    // reduced to transferred bytes by aggregateTransfer() at measurement time.
+    const networkEvents = [];
+    const cdp = await page.createCDPSession();
+    for (const method of NETWORK_EVENTS) {
+      cdp.on(method, (params) => networkEvents.push({ method, params }));
+    }
+    await cdp.send('Network.enable');
+
     // Last main-frame document response, so HTTP and JS redirects both
     // end up pointing at the document that was actually measured.
     let mainDocument = null;
-    page.on('response', async (response) => {
+    page.on('response', (response) => {
       try {
-        const request = response.request();
-        if (request.isNavigationRequest() && response.frame() === page.mainFrame()) {
+        if (response.request().isNavigationRequest() && response.frame() === page.mainFrame()) {
           const status = response.status();
           // Skip 3xx hops; keep one only if nothing else ever arrives.
           if (!(status >= 300 && status < 400) || !mainDocument) {
             mainDocument = { status, url: response.url() };
           }
         }
-        const headers = response.headers();
-        let size = headers['content-length'] ? parseInt(headers['content-length'], 10) : 0;
-        if (!size) {
-          try {
-            const buffer = await response.buffer();
-            size = buffer.length;
-          } catch (e) { size = 0; }
-        }
-        resources.push({ url: request.url(), type: request.resourceType(), size });
       } catch (e) {}
     });
 
@@ -86,6 +91,10 @@ async function analyzePage(url) {
       };
     }, { attempts: MEASURE_ATTEMPTS, settle: () => settle(page) });
 
+    // Bytes are counted up to this moment; anything still downloading
+    // contributes only what has arrived so far.
+    const transfer = aggregateTransfer(networkEvents.slice());
+
     const finalUrl = page.url();
     const mainDocumentStatus = mainDocument
       ? mainDocument.status
@@ -93,10 +102,8 @@ async function analyzePage(url) {
 
     const jsCoverage = await page.coverage.stopJSCoverage();
 
-    const totalBytes = resources.reduce((sum, r) => sum + r.size, 0);
-    const scriptBytes = resources.filter(r => r.type === 'script').reduce((sum, r) => sum + r.size, 0);
-    const imageBytes = resources.filter(r => r.type === 'image').reduce((sum, r) => sum + r.size, 0);
-    const topResources = [...resources].sort((a, b) => b.size - a.size).slice(0, 5);
+    const { totalBytes, scriptBytes, imageBytes, resourceCount, unfinishedRequests, serviceWorkerResponses } = transfer;
+    const topResources = [...transfer.resources].sort((a, b) => b.size - a.size).slice(0, 5);
 
     // Calculate unused JS bytes per file using Coverage API ranges
     const jsWaste = jsCoverage.map(entry => {
@@ -114,10 +121,11 @@ async function analyzePage(url) {
 
     return {
       url, finalUrl, mainDocumentStatus, pageTitle, challengePhrase,
+      byteMethod: BYTE_METHOD, unfinishedRequests, serviceWorkerResponses,
       loadTime, totalBytes, scriptBytes, imageBytes, domNodeCount,
       scriptDuration: metrics.ScriptDuration || 0,
       jsHeapUsed: metrics.JSHeapUsedSize || 0,
-      topResources, resourceCount: resources.length,
+      topResources, resourceCount,
       jsWaste
     };
   } finally {

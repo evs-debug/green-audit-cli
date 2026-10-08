@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { loadConfig } = require('./config');
+const { BYTE_METHOD } = require('./transferBytes');
 
 function getCacheFilePath() {
   const dir = path.join(process.cwd(), 'reports');
@@ -24,6 +25,11 @@ function loadCachedAnalysis(url, cfg = loadConfig()) {
     // Entries from before TTL support was added have no savedAt --
     // treat as stale rather than trusting data of unknown age.
     if (!entry.savedAt) return null;
+
+    // Entries measured with a different byte-counting method (including
+    // pre-CDP entries, which have no byteMethod and used content-length
+    // sizes) aren't comparable -- re-audit instead of serving them.
+    if (!entry.data || entry.data.byteMethod !== BYTE_METHOD) return null;
 
     const ttlMs = cfg.cache.ttlHours * 60 * 60 * 1000;
     const ageMs = Date.now() - entry.savedAt;
