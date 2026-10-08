@@ -9,17 +9,27 @@ const { loadConfig, writeSampleConfig } = require('./src/config');        // Mem
 const { appendHistory, printHistory, clearHistory } = require('./src/history'); // Member 5
 const { runBatch } = require('./src/batch');                              // Member 3 (batch CLI)
 const { checkAuditValidity } = require('./src/auditValidity');
+const { parseRunsArg, measure, printRunProgress } = require('./src/collectRuns');
+const { formatRunSummary, formatGradeNote } = require('./src/aggregateRuns');
 
-const args = process.argv.slice(2);
+// --runs is removed from args first, so its value can't be mistaken for
+// the URL or batch file.
+let args, runs;
+try {
+  ({ args, runs } = parseRunsArg(process.argv.slice(2)));
+} catch (err) {
+  console.error(`❌ ${err.message}`);
+  process.exit(1);
+}
 
 // ── Batch mode ──────────────────────────────────────────────────────────────
 if (args[0] === 'batch') {
   const filePath = args[1];
   if (!filePath) {
-    console.log('Usage: green-audit batch <file.txt|file.csv>');
+    console.log('Usage: green-audit batch <file.txt|file.csv> [--runs N]');
     process.exit(1);
   }
-  runBatch(filePath).catch(err => {
+  runBatch(filePath, { runs }).catch(err => {
     console.error('\n❌ Batch audit failed:', err.message);
     process.exit(1);
   });
@@ -41,8 +51,9 @@ if (args[0] === 'batch') {
 
   const url = args.find((a) => !a.startsWith('--'));
   if (!url) {
-    console.log('Usage: node index.js <url> [--no-history] [--no-open]');
-    console.log('       node index.js batch <file.txt|file.csv>');
+    console.log('Usage: node index.js <url> [--runs N] [--no-history] [--no-open]');
+    console.log('       node index.js batch <file.txt|file.csv> [--runs N]');
+    console.log('       (--runs N: audit N times and report the median; default 3, max 10)');
     console.log('       node index.js --history [urlFilter]');
     console.log('       node index.js --clear-history');
     console.log('       node index.js --init-config | --show-config');
@@ -57,9 +68,10 @@ if (args[0] === 'batch') {
       const normalizedUrl = normalizeUrl(url);
       console.log(`\n🔍 Auditing: ${normalizedUrl}\n`);
       let fromCache = false;
-      let data = loadCachedAnalysis(normalizedUrl);
+      let data = loadCachedAnalysis(normalizedUrl, cfg, { minRuns: runs });
       if (!data) {
-        data = await analyzePage(normalizedUrl);
+        if (runs > 1) console.log(`Running ${runs} audits (median reported)...`);
+        data = await measure(normalizedUrl, { runs, analyze: analyzePage, cfg, onRun: printRunProgress });
       } else {
         fromCache = true;
         console.log('📦 Using cached analysis snapshot for this URL.');
@@ -76,6 +88,7 @@ if (args[0] === 'batch') {
       console.log('📦 PAGE WEIGHT');
       console.log('─'.repeat(50));
       console.log(`Total transferred: ${(data.totalBytes / 1024).toFixed(1)} KB`);
+      if (data.runStats) console.log(`  ${formatRunSummary(data.runStats)}`);
       console.log(`  JS:     ${(data.scriptBytes / 1024).toFixed(1)} KB`);
       console.log(`  Images: ${(data.imageBytes / 1024).toFixed(1)} KB`);
       console.log(`Requests: ${data.resourceCount}`);
@@ -113,7 +126,7 @@ if (args[0] === 'batch') {
       } else if (validity.possiblyIncomplete) {
         console.log(`\n  ℹ️  Possibly incomplete: ${validity.reasons.join('; ')}`);
       }
-      console.log(`\n  🏆 GREEN SCORE: ${grade}${validity.suspect ? ' (unverified)' : ''}  (${label})`);
+      console.log(`\n  🏆 GREEN SCORE: ${grade}${formatGradeNote(validity, data.runStats)}  (${label})`);
       console.log('\n' + '─'.repeat(50));
       console.log('🚨 TOP GREEN BOTTLENECKS (largest assets)');
       console.log('─'.repeat(50));

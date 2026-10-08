@@ -1,16 +1,16 @@
 const fs = require('fs');
 const path = require('path');
+const { formatGradeNote, formatRange } = require('./aggregateRuns');
 
 // Saves a single Markdown file summarizing an entire batch run — the
 // per-URL results printed to the terminal by printComparisonTable(),
 // but persisted so it can be cited/screenshotted later (e.g. in the
 // final project report) instead of scrolling back through terminal history.
 
-// Grade annotation shared by the terminal table and both batch reports.
+// Grade annotation shared by the terminal table and both batch reports,
+// e.g. " (unverified)" or " (borderline: runs spanned B to C)".
 function gradeNote(r) {
-  if (r.validity && r.validity.suspect) return ' (unverified)';
-  if (r.validity && r.validity.possiblyIncomplete) return ' (possibly incomplete)';
-  return '';
+  return formatGradeNote(r.validity, r.runStats, { includeIncomplete: true });
 }
 
 // Splits results and computes the summary stats. Suspect audits are listed
@@ -54,11 +54,11 @@ function buildBatchMarkdown(results) {
   if (succeeded.length > 0) {
     lines.push(`## Comparison`);
     lines.push(``);
-    lines.push(`| URL | Grade | CO2e per view (g) | Page Weight (KB) | HTTP | Final URL |`);
-    lines.push(`|---|---|---|---|---|---|`);
+    lines.push(`| URL | Grade | CO2e per view (g) | Page Weight (KB) | HTTP | Final URL | Range |`);
+    lines.push(`|---|---|---|---|---|---|---|`);
     // Sort best grade first so the "greenest" site leads the table.
     sorted.forEach((r) => {
-      lines.push(`| ${r.url} | ${r.grade}${gradeNote(r)} | ${r.carbonGrams.toFixed(3)} | ${r.totalKB.toFixed(1)} | ${statusText(r)} | ${finalUrlText(r)} |`);
+      lines.push(`| ${r.url} | ${r.grade}${gradeNote(r)} | ${r.carbonGrams.toFixed(3)} | ${r.totalKB.toFixed(1)} | ${statusText(r)} | ${finalUrlText(r)} | ${formatRange(r.runStats)} |`);
     });
     lines.push(``);
 

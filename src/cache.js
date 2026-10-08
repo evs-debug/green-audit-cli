@@ -11,7 +11,7 @@ function getCacheFilePath() {
   return path.join(dir, '.analysis-cache.json');
 }
 
-function loadCachedAnalysis(url, cfg = loadConfig()) {
+function loadCachedAnalysis(url, cfg = loadConfig(), { minRuns = 1 } = {}) {
   const cachePath = getCacheFilePath();
   if (!fs.existsSync(cachePath)) {
     return null;
@@ -30,6 +30,11 @@ function loadCachedAnalysis(url, cfg = loadConfig()) {
     // pre-CDP entries, which have no byteMethod and used content-length
     // sizes) aren't comparable -- re-audit instead of serving them.
     if (!entry.data || entry.data.byteMethod !== BYTE_METHOD) return null;
+
+    // A median of fewer runs than requested isn't good enough. Single-run
+    // entries have no runStats and count as 1 run.
+    const cachedRuns = entry.data.runStats ? entry.data.runStats.requested : 1;
+    if (cachedRuns < minRuns) return null;
 
     const ttlMs = cfg.cache.ttlHours * 60 * 60 * 1000;
     const ageMs = Date.now() - entry.savedAt;
