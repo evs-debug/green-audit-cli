@@ -11,11 +11,12 @@ const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ga-cache-'));
 process.chdir(tmpDir);
 
 const { loadCachedAnalysis, saveCachedAnalysis } = require(path.join(__dirname, '..', 'src', 'cache'));
+const { BYTE_METHOD } = require(path.join(__dirname, '..', 'src', 'transferBytes'));
 
 // --- fresh entry is returned as a cache hit ---
-saveCachedAnalysis('https://example.com', { totalBytes: 500 });
+saveCachedAnalysis('https://example.com', { totalBytes: 500, byteMethod: BYTE_METHOD });
 const hit = loadCachedAnalysis('https://example.com');
-assert.deepStrictEqual(hit, { totalBytes: 500 }, 'fresh cache entry should be returned');
+assert.deepStrictEqual(hit, { totalBytes: 500, byteMethod: BYTE_METHOD }, 'fresh cache entry should be returned');
 
 // --- unknown URL is a clean miss ---
 assert.strictEqual(loadCachedAnalysis('https://not-cached.example.com'), null);
@@ -33,13 +34,22 @@ fs.writeFileSync(cachePath, JSON.stringify(legacyCache, null, 2));
 assert.strictEqual(loadCachedAnalysis('https://legacy.example.com'), null, 'legacy entries without savedAt should be a miss');
 
 // --- custom ttlHours via cfg is respected ---
-saveCachedAnalysis('https://short-ttl.example.com', { totalBytes: 100 });
+saveCachedAnalysis('https://short-ttl.example.com', { totalBytes: 100, byteMethod: BYTE_METHOD });
 const cache2 = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
 cache2['https://short-ttl.example.com'].savedAt -= 2 * 60 * 60 * 1000; // 2 hours old
 fs.writeFileSync(cachePath, JSON.stringify(cache2, null, 2));
 const shortTtlCfg = { cache: { ttlHours: 1 } }; // 1 hour TTL -- 2-hour-old entry should miss
 assert.strictEqual(loadCachedAnalysis('https://short-ttl.example.com', shortTtlCfg), null, 'custom shorter ttlHours should expire the entry');
 const longTtlCfg = { cache: { ttlHours: 48 } }; // same entry, longer TTL -- should still hit
-assert.deepStrictEqual(loadCachedAnalysis('https://short-ttl.example.com', longTtlCfg), { totalBytes: 100 }, 'custom longer ttlHours should still hit');
+assert.deepStrictEqual(loadCachedAnalysis('https://short-ttl.example.com', longTtlCfg), { totalBytes: 100, byteMethod: BYTE_METHOD }, 'custom longer ttlHours should still hit');
+
+// --- fresh entries measured with a different byte method are misses ---
+// Pre-CDP entries (content-length sizes) have no byteMethod at all.
+saveCachedAnalysis('https://header-sized.example.com', { totalBytes: 6500000 });
+assert.strictEqual(loadCachedAnalysis('https://header-sized.example.com'), null, 'entry without byteMethod should be a miss');
+saveCachedAnalysis('https://other-method.example.com', { totalBytes: 100, byteMethod: 'content-length' });
+assert.strictEqual(loadCachedAnalysis('https://other-method.example.com'), null, 'entry with a different byteMethod should be a miss');
+saveCachedAnalysis('https://future-method.example.com', { totalBytes: 100, byteMethod: BYTE_METHOD + '-next' });
+assert.strictEqual(loadCachedAnalysis('https://future-method.example.com'), null, 'byteMethod must match exactly');
 
 console.log('✅ cache tests passed');

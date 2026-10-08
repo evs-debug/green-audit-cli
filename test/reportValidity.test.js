@@ -18,6 +18,7 @@ function makeData(overrides = {}) {
   return {
     url: 'https://example.com', finalUrl: 'https://example.com', mainDocumentStatus: 200,
     pageTitle: 'Example Domain', challengePhrase: null,
+    byteMethod: 'cdp-encoded-v1', unfinishedRequests: 0, serviceWorkerResponses: 0,
     loadTime: 300, totalBytes: 2 * 1024 * 1024, scriptBytes: 0, imageBytes: 0,
     domNodeCount: 1200, scriptDuration: 0.1, jsHeapUsed: 1024 * 1024,
     topResources: [], resourceCount: 40, jsWaste: [],
