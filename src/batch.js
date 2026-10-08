@@ -9,6 +9,8 @@ const { saveBatchHtmlReport } = require('./batchHtmlReport');
 const { normalizeUrl } = require('./url');
 const { loadCachedAnalysis, saveCachedAnalysis } = require('./cache');
 const { checkAuditValidity } = require('./auditValidity');
+const { measure, printRunProgress } = require('./collectRuns');
+const { formatRange } = require('./aggregateRuns');
 
 function parseInputFile(filePath) {
   let content;
@@ -43,13 +45,15 @@ function parseInputFile(filePath) {
   return lines.filter(Boolean);
 }
 
-// `analyze` is injectable so tests can substitute a fake for puppeteer.
-async function auditOne(rawUrl, { analyze = analyzePage } = {}) {
+// `analyze` and `sleep` are injectable so tests can substitute fakes for
+// puppeteer and the pause between runs. runs defaults to 1 here; the CLI
+// passes its own default (see collectRuns.js).
+async function auditOne(rawUrl, { analyze = analyzePage, runs = 1, sleep } = {}) {
   const normalizedUrl = normalizeUrl(rawUrl);
 
-  let data = loadCachedAnalysis(normalizedUrl);
+  let data = loadCachedAnalysis(normalizedUrl, undefined, { minRuns: runs });
   const fromCache = Boolean(data);
-  if (!data) data = await analyze(normalizedUrl);
+  if (!data) data = await measure(normalizedUrl, { runs, analyze, sleep, onRun: printRunProgress });
 
   const validity = checkAuditValidity(data);
   // Don't cache suspect audits: the next run should retry the live site
@@ -76,6 +80,7 @@ async function auditOne(rawUrl, { analyze = analyzePage } = {}) {
     carbonGrams,
     totalKB: data.totalBytes / 1024,
     validity,
+    runStats: data.runStats ?? null,
   };
 }
 
@@ -91,7 +96,7 @@ function printComparisonTable(results) {
       const redirect = r.finalUrl && r.finalUrl !== r.url ? ` → ${r.finalUrl}` : '';
       console.log(
         `${r.url}  scored  ${r.grade}${gradeNote(r)}  ` +
-        `(${r.carbonGrams.toFixed(3)}g CO2e, ${r.totalKB.toFixed(1)} KB, HTTP ${r.mainDocumentStatus ?? 'unknown'}${redirect})`
+        `(${r.carbonGrams.toFixed(3)}g CO2e, ${r.totalKB.toFixed(1)} KB${r.runStats ? `, range ${formatRange(r.runStats)}` : ''}, HTTP ${r.mainDocumentStatus ?? 'unknown'}${redirect})`
       );
     }
   });
@@ -99,7 +104,7 @@ function printComparisonTable(results) {
   console.log('─'.repeat(70) + '\n');
 }
 
-async function runBatch(filePath, { analyze = analyzePage } = {}) {
+async function runBatch(filePath, { analyze = analyzePage, runs = 1, sleep } = {}) {
   const urls = parseInputFile(filePath);
 
   if (urls.length === 0) {
@@ -107,13 +112,13 @@ async function runBatch(filePath, { analyze = analyzePage } = {}) {
     return [];
   }
 
-  console.log(`\n🔍 Running batch audit on ${urls.length} URL(s)...\n`);
+  console.log(`\n🔍 Running batch audit on ${urls.length} URL(s)${runs > 1 ? `, ${runs} runs each (median reported)` : ''}...\n`);
 
   const results = [];
   for (const rawUrl of urls) {
     try {
       console.log(`→ Auditing ${rawUrl}...`);
-      const result = await auditOne(rawUrl, { analyze });
+      const result = await auditOne(rawUrl, { analyze, runs, sleep });
       results.push(result);
     } catch (err) {
       console.log(`   ❌ Failed: ${err.message}`);
