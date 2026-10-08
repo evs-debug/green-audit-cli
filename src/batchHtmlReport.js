@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { summarizeBatch, gradeNote } = require('./batchReport');
+const { formatRange } = require('./aggregateRuns');
 
 // Page-controlled strings (final URLs, error text) are escaped.
 function escapeHtml(value) {
@@ -29,12 +30,13 @@ function generateBatchReport(results) {
           <td>${r.carbonGrams.toFixed(3)} g</td>
           <td>${r.totalKB.toFixed(1)} KB</td>
           <td>${r.mainDocumentStatus ?? 'unknown'}</td>
+          <td>${formatRange(r.runStats)}</td>
         </tr>`).join('');
 
   const failedRows = failed.map(r => `
         <tr class="failed-row">
           <td colspan="2">${escapeHtml(r.url)}</td>
-          <td colspan="4">Failed \u2014 ${escapeHtml(r.error)}</td>
+          <td colspan="5">Failed \u2014 ${escapeHtml(r.error)}</td>
         </tr>`).join('');
 
   return `<!DOCTYPE html>
@@ -115,7 +117,7 @@ function generateBatchReport(results) {
     <div class="glass-card">
       <table>
         <thead>
-          <tr><th>#</th><th>URL</th><th>Grade</th><th>CO2e / view</th><th>Page Weight</th><th>HTTP</th></tr>
+          <tr><th>#</th><th>URL</th><th>Grade</th><th>CO2e / view</th><th>Page Weight</th><th>HTTP</th><th>Range</th></tr>
         </thead>
         <tbody>${rows}${failedRows}</tbody>
       </table>

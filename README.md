@@ -82,11 +82,15 @@ Every audit (except when run with `--no-history`) appends a row to `history.csv`
 ```bash
 node index.js <url> --no-history   # skip logging this run
 node index.js <url> --no-open      # don't auto-open the HTML report
+node index.js <url> --runs 5       # audit 5 times and report the median (default 3, max 10)
+node index.js batch <file> --runs 1  # one run per URL, the pre-median behavior
 ```
+
+With `--runs N` (default 3), each audit loads the page N times in a fresh browser, one after another with a 2-second pause between loads, and reports the run with the median page weight. Runs that look like a block page are left out of the median, and failed runs are skipped; the audit fails only if every run fails. Reports show the range across runs, and a grade is marked **borderline** when the lightest or heaviest run would have graded differently (for example `B (borderline: runs spanned B to C)`). A cached result is reused only if it was measured with at least as many runs as requested.
 
 ### What happens on a single-URL audit
 
-1. The tool loads the page in a headless browser and collects metrics.
+1. The tool loads the page in a headless browser and collects metrics (3 times by default; see `--runs`).
 2. It prints the audit summary to the terminal.
 3. It saves a timestamped HTML report (plus Markdown and JSON) to the `reports/` folder.
 4. It logs the run to `history.csv`.
@@ -104,6 +108,8 @@ Reports are saved to the `reports/` directory:
 
 The tool loads a page in a headless Chromium browser and measures page weight as the bytes transferred over the network, as reported by Chrome's DevTools Protocol (`encodedDataLength`: compressed bodies plus response headers, the same figure as DevTools' "transferred" column). Requests that are aborted or still downloading when the page is measured count only the bytes received so far, and redirect hops are counted individually. It also captures DOM node count (structural complexity) and JS heap/script execution time via Chrome's performance metrics. To convert bytes into a carbon estimate, we use the Sustainable Web Design model's energy intensity figure — approximately 0.81 kWh per GB transferred (covering data center, network transmission, and end-user device energy) — multiplied by a global average grid carbon intensity of ~442g CO2e per kWh. This gives a per-page-view estimate in grams of CO2e, which can be compared across sites or before/after optimizations. These constants, along with grade cutoffs and DOM thresholds, are overridable via `.green-auditrc.json`.
 
+When an audit uses several runs and the number of valid runs is even, the tool reports the heavier of the two middle runs (the upper-middle run by page weight), not an average of the two, so every reported figure comes from one real run.
+
 ## Limitations and methodology
 
 Known limits of the numbers this tool produces. Figures below come from audits run while developing it; they are examples, not benchmarks.
@@ -113,7 +119,7 @@ Known limits of the numbers this tool produces. Figures below come from audits r
 - This can read higher than a manual check. For https://www.bbc.com the CLI read about 3.2 MB (median of 4 runs, range 2.9–3.7 MB); Chrome DevTools in an Incognito window showed 1.9 MB, and the ad scripts did not load there. For https://en.wikipedia.org/wiki/India the CLI read 965 KB and DevTools 789 KB.
 
 ### Run-to-run variability
-- A single audit is one sample. Four BBC runs differed from their median by up to about 15%.
+- A single run is one sample. Four BBC runs differed from their median by up to about 15%. Audits therefore report the median of 3 runs by default (`--runs`); with only a few runs the median and range are still rough, and a median does not remove consistent bias such as ads that load on every run.
 - Video-heavy and bot-protected sites vary much more: https://www.nytimes.com returned a 150 KB block page on one run and the full page on another.
 - Streaming video counts only the bytes received before the page is measured, so it depends on how long the tool waits (until the network is mostly idle, plus about 1.5 s for late redirects).
 - A page near a grade cutoff can get a different grade on another run.

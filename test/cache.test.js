@@ -52,4 +52,18 @@ assert.strictEqual(loadCachedAnalysis('https://other-method.example.com'), null,
 saveCachedAnalysis('https://future-method.example.com', { totalBytes: 100, byteMethod: BYTE_METHOD + '-next' });
 assert.strictEqual(loadCachedAnalysis('https://future-method.example.com'), null, 'byteMethod must match exactly');
 
+// --- minRuns: a cached median of fewer runs than requested is a miss ---
+saveCachedAnalysis('https://median.example.com', { totalBytes: 300, byteMethod: BYTE_METHOD, runStats: { requested: 3 } });
+assert.ok(loadCachedAnalysis('https://median.example.com', undefined, { minRuns: 3 }), '3-run entry serves --runs 3');
+assert.ok(loadCachedAnalysis('https://median.example.com', undefined, { minRuns: 1 }), '3-run entry serves --runs 1');
+assert.ok(loadCachedAnalysis('https://median.example.com'), 'default minRuns is 1');
+assert.strictEqual(loadCachedAnalysis('https://median.example.com', undefined, { minRuns: 5 }), null, '3-run entry must not serve --runs 5');
+// Single-run entries (no runStats) count as 1 run.
+saveCachedAnalysis('https://single.example.com', { totalBytes: 300, byteMethod: BYTE_METHOD });
+assert.ok(loadCachedAnalysis('https://single.example.com', undefined, { minRuns: 1 }));
+assert.strictEqual(loadCachedAnalysis('https://single.example.com', undefined, { minRuns: 3 }), null, 'single run must not serve --runs 3');
+// The byteMethod check still applies to multi-run entries.
+saveCachedAnalysis('https://old-median.example.com', { totalBytes: 300, runStats: { requested: 5 } });
+assert.strictEqual(loadCachedAnalysis('https://old-median.example.com', undefined, { minRuns: 3 }), null);
+
 console.log('✅ cache tests passed');

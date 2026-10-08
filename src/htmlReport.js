@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { describePageWeightPercentile } = require('./pageWeightPercentile');
 const { checkAuditValidity } = require('./auditValidity');
+const { formatRunSummary, formatGradeNote } = require('./aggregateRuns');
 
 // Page titles come from the audited site, so escape anything page-controlled.
 function escapeHtml(value) {
@@ -103,6 +104,9 @@ function generateReport(data, energyKwh, carbonGrams, grade, label) {
   const rating = getRatingInfo(grade);
   const weightComparison = describePageWeightPercentile(data.totalBytes);
   const validity = checkAuditValidity(data);
+  // Borderline note next to the grade; "unverified" already has its badge.
+  const gradeNote = validity.suspect ? '' : formatGradeNote(validity, data.runStats).trim();
+  const runSummary = formatRunSummary(data.runStats);
   const statusText = data.mainDocumentStatus ?? 'unknown';
   const finalUrlNote = data.finalUrl && data.finalUrl !== data.url
     ? ` &rarr; <strong>${escapeHtml(data.finalUrl)}</strong>`
@@ -196,6 +200,8 @@ function generateReport(data, energyKwh, carbonGrams, grade, label) {
         .validity-banner.suspect { background: #fee2e2; border: 1px solid #ef4444; color: #7f1d1d; }
         .validity-banner.incomplete { background: #fef3c7; border: 1px solid #f59e0b; color: #78350f; }
         .status-badge.unverified { color: #b91c1c; }
+        .grade-note { font-family: system-ui, sans-serif; font-size: 0.95rem; font-weight: 600; color: #b45309; }
+        .run-summary { font-size: 0.875rem; color: var(--text-muted); margin-top: 0.5rem; }
         .container { max-width: 1100px; margin: 0 auto; padding: 2rem; }
         .page-title { font-size: 2.75rem; margin-bottom: 0.5rem; }
         .page-subtitle { color: var(--text-muted); margin-bottom: 2rem; font-size: 1.1rem;}
@@ -305,8 +311,9 @@ function generateReport(data, energyKwh, carbonGrams, grade, label) {
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                             Analysis Complete
                         </div>`}
-                        <h2 class="serif"><strong>${rating.text}</strong> Rating</h2>
-                        <p>${rating.description}${weightComparison ? ' ' + weightComparison : ''}</p>
+                        <h2 class="serif"><strong>${rating.text}</strong> Rating${gradeNote ? ` <span class="grade-note">${gradeNote}</span>` : ''}</h2>
+                        <p>${rating.description}${weightComparison ? ' ' + weightComparison : ''}</p>${runSummary ? `
+                        <p class="run-summary">${runSummary}.</p>` : ''}
                     </div>
                     <div class="grade-circle">${grade}</div>
                 </div>

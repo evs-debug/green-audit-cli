@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { saveHtmlReport } = require('./htmlReport');
 const { checkAuditValidity } = require('./auditValidity');
+const { formatRunSummary, formatGradeNote } = require('./aggregateRuns');
 
 function buildMarkdownReport(data, energyKwh, carbonGrams, grade, label, validity = checkAuditValidity(data)) {
   const lines = [];
@@ -19,10 +20,11 @@ function buildMarkdownReport(data, energyKwh, carbonGrams, grade, label, validit
     lines.push(`> ℹ️ **Possibly incomplete:** ${validity.reasons.join('; ')}.`);
     lines.push(``);
   }
-  lines.push(`## Green Score: ${grade} — ${label}${validity.suspect ? ' (unverified)' : ''}`);
+  lines.push(`## Green Score: ${grade} — ${label}${formatGradeNote(validity, data.runStats)}`);
   lines.push(``);
   lines.push(`## Page Weight`);
   lines.push(`- Total transferred: ${(data.totalBytes / 1024).toFixed(1)} KB`);
+  if (data.runStats) lines.push(`- Runs: ${formatRunSummary(data.runStats)}`);
   lines.push(`- JS: ${(data.scriptBytes / 1024).toFixed(1)} KB`);
   lines.push(`- Images: ${(data.imageBytes / 1024).toFixed(1)} KB`);
   lines.push(`- Requests: ${data.resourceCount}`);
