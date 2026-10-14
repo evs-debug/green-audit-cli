@@ -8,19 +8,19 @@ Functional — single-URL audits, batch auditing, configurable thresholds, and a
 
 ## Features
 
-- 🔍 Audits any URL in a headless Chromium browser (puppeteer)
-- 📦 Measures page weight, total requests, and load time
-- 🧬 Calculates DOM complexity
-- ⚙️ Captures JS execution time and heap memory usage
-- ♻️ Detects unused JavaScript (dead code waste) via the Chrome Coverage API
-- 🌍 Estimates the carbon footprint per page view (CO₂e)
-- 🏆 Calculates a green score grade (A–F)
-- 💾 Generates a self-contained HTML report, plus Markdown and JSON exports
-- 🌐 Auto-opens the HTML report in your browser after the audit
-- ⚡ Caches results per URL so repeat audits are instant
-- 🗂️ Batch mode — audit a list of URLs from a `.txt`/`.csv` file in one run, with a comparison summary
-- ⚙️ Configurable thresholds — override carbon constants, grade cutoffs, and DOM complexity limits via `.green-auditrc.json`
-- 📜 Audit history — every run is logged to `history.csv`, viewable/filterable from the CLI
+-  Audits any URL in a headless Chromium browser (puppeteer)
+-  Measures page weight, total requests, and load time
+-  Calculates DOM complexity
+-  Captures JS execution time and heap memory usage
+-  Detects unused JavaScript (dead code waste) via the Chrome Coverage API
+-  Estimates the carbon footprint per page view (CO₂e)
+-  Calculates a green score grade (A–F)
+-  Generates a self-contained HTML report, plus Markdown and JSON exports
+-  Auto-opens the HTML report in your browser after the audit
+-  Caches results per URL so repeat audits are instant
+-  Batch mode — audit a list of URLs from a `.txt`/`.csv` file in one run, with a comparison summary
+-  Configurable thresholds — override carbon constants, grade cutoffs, and DOM complexity limits via `.green-auditrc.json`
+-  Audit history — every run is logged to `history.csv`, viewable/filterable from the CLI
 
 ## Requirements
 
